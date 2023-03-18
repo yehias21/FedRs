@@ -1,0 +1,9 @@
+Problem in the project:
+- Sparcity of the dataset (Item might be not available in the dataset)
+    - analysis of frequency of the items
+    - clustering of the users in 500 cluster for example?
+    - train on all the users?
+- Evaluation is on the local model not the global one why?
+- Sampling, loading and batching of the dataset
+- Add batch normalization and dropout in the model
+

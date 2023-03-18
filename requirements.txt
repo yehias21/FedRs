@@ -1,0 +1,5 @@
+tensorboardX
+numpy
+pandas
+torch
+config
