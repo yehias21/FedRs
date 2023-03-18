@@ -1,0 +1,20 @@
+Problem in the project:
+- Sparcity of the dataset (Item might be not available in the dataset)
+    - analysis of frequency of the items
+    - clustering of the users in 500 cluster for example?
+    - train on all the users?
+- Evaluation is on the local model not the global one why?
+- Sampling, loading and batching of the dataset ==> Sampling bias.
+- Add batch normalization and dropout in the model
+- use debugger (ML debugger: https://github.com/f-dangel/cockpit and search for others), hyperparameter search model, tracker (https://neptune.ai/blog/the-best-tensorboard-alternatives#comet) or MLflow and the fastest way to store model files
+- Choose the federated library: flower, openfl, fate, pysyft
+View these links:
+- https://github.com/TsingZ0/PFL-Non-IID
+- https://github.com/FederatedAI/Practicing-Federated-Learning
+- https://github.com/WwZzz/easyFL
+- https://github.com/QinbinLi/MOON
+- https://github.com/vaseline555/Federated-Averaging-PyTorch
+- https://github.com/AvivSham/pFedHN
+- https://github.com/JYWa/FedNova
+- https://github.com/iQua/flsim
+- https://github.com/balanced-fl/Addressing-Class-Imbalance-FL/tree/master/FEMNIST-4-Losses/models
