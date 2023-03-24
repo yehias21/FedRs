@@ -1,3 +1,5 @@
+torchvision
+flwr
 tensorboardX
 numpy
 pandas
