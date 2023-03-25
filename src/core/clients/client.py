@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import flwr as fl
 from src.core.model.testing_model import Net
-
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,31 +26,32 @@ def load_data():
 
 
 class NCFClient(fl.client.NumPyClient):
-    def __init__(self, model, train_data, val_data):
+    def __init__(self, model, trainloader, testloader, num_examples):
         self.model = model
-        self.train_data = train_data
-        self.val_data = val_data
+        self.trainloader = trainloader
+        self.testloader = testloader
         self.batch_size = 32
         self.learning_rate = 0.001
+        self.num_examples = num_examples
 
-    def train(self, trainloader, epochs):
+    def train(self, epochs):
         """Train the model on the training set."""
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
         for _ in range(epochs):
-            for images, labels in trainloader:
+            for images, labels in tqdm(self.trainloader):
                 images, labels = images.to(DEVICE), labels.to(DEVICE)
                 optimizer.zero_grad()
                 loss = criterion(self.model(images), labels)
                 loss.backward()
                 optimizer.step()
 
-    def test(self, testloader):
-        """Validate the network on the entire test set."""
+    def test(self):
+        """Test the network on the entire test set."""
         criterion = torch.nn.CrossEntropyLoss()
         correct, total, loss = 0, 0, 0.0
         with torch.no_grad():
-            for data in testloader:
+            for data in tqdm(self.testloader):
                 images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
                 outputs = self.model(images)
                 loss += criterion(outputs, labels).item()
@@ -70,14 +71,14 @@ class NCFClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        self.train(trainloader, epochs=1)
-        return self.get_parameters(config={}), num_examples["trainset"], {}
+        self.train(epochs=1)
+        return self.get_parameters(config={}), self.num_examples["trainset"], {}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
         # TODO : Change to Get the Hit Ratio and NDCG
-        loss, accuracy = self.test(testloader)
-        return float(loss), num_examples["testset"], {"accuracy": float(accuracy)}
+        loss, accuracy = self.test()
+        return float(loss), self.num_examples["testset"], {"accuracy": float(accuracy)}
 
 
 if __name__ == '__main__':
@@ -85,4 +86,4 @@ if __name__ == '__main__':
     net = Net().to(DEVICE)
     trainloader, testloader, num_examples = load_data()
 
-    fl.client.start_numpy_client(server_address="localhost:8080", client=NCFClient(model=net, train_data=trainloader, val_data=testloader))
+    fl.client.start_numpy_client(server_address="localhost:8080", client=NCFClient(model=net, trainloader=trainloader, testloader=testloader, num_examples=num_examples))
