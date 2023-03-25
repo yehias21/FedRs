@@ -70,13 +70,13 @@ class NCFClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        self.train(self.model, trainloader, epochs=1)
+        self.train(trainloader, epochs=1)
         return self.get_parameters(config={}), num_examples["trainset"], {}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
         # TODO : Change to Get the Hit Ratio and NDCG
-        loss, accuracy = self.test(self.model, testloader)
+        loss, accuracy = self.test(testloader)
         return float(loss), num_examples["testset"], {"accuracy": float(accuracy)}
 
 
@@ -85,4 +85,4 @@ if __name__ == '__main__':
     net = Net().to(DEVICE)
     trainloader, testloader, num_examples = load_data()
 
-    fl.client.start_numpy_client(server_address="[::]:8080", client=NCFClient(model=net, train_data=trainloader, val_data=testloader))
+    fl.client.start_numpy_client(server_address="localhost:8080", client=NCFClient(model=net, train_data=trainloader, val_data=testloader))
