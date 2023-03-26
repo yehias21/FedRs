@@ -1,13 +1,13 @@
 from collections import OrderedDict
+
 import flwr as fl
-from src.core.model.testing_model import Net
-from tqdm import tqdm
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
+from tqdm import tqdm
+
+from src.core.model.testing_model import Net
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -86,4 +86,10 @@ if __name__ == '__main__':
     net = Net().to(DEVICE)
     trainloader, testloader, num_examples = load_data()
 
-    fl.client.start_numpy_client(server_address="localhost:8080", client=NCFClient(model=net, trainloader=trainloader, testloader=testloader, num_examples=num_examples))
+    fl.client.start_numpy_client(server_address="localhost:8080",
+                                 client=NCFClient(model=net,
+                                                  trainloader=trainloader,
+                                                  testloader=testloader,
+                                                  num_examples=num_examples
+                                                  )
+                                 )

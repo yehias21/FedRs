@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class Generalized_Matrix_Factorization(nn.Module):
     def __init__(self, args, num_users, num_items):
         super(Generalized_Matrix_Factorization, self).__init__()
@@ -24,6 +25,7 @@ class Generalized_Matrix_Factorization(nn.Module):
 
     def init_weight(self):
         pass
+
 
 class Multi_Layer_Perceptron(nn.Module):
     def __init__(self, args, num_users, num_items):
@@ -60,14 +62,13 @@ class Multi_Layer_Perceptron(nn.Module):
         pass
 
 
-
 class NeuMF(nn.Module):
     def __init__(self, args, num_users, num_items):
         super(NeuMF, self).__init__()
         self.num_users = num_users
         self.num_items = num_items
         self.factor_num_mf = args.factor_num
-        self.factor_num_mlp =  int(args.layers[0]/2)
+        self.factor_num_mlp = int(args.layers[0] / 2)
         self.layers = args.layers
         self.dropout = args.dropout
 
@@ -91,11 +92,11 @@ class NeuMF(nn.Module):
         nn.init.normal_(self.embedding_item_mlp.weight, std=0.01)
         nn.init.normal_(self.embedding_user_mf.weight, std=0.01)
         nn.init.normal_(self.embedding_item_mf.weight, std=0.01)
-        
+
         for m in self.fc_layers:
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
-                
+
         nn.init.xavier_uniform_(self.affine_output.weight)
 
         for m in self.modules():
@@ -110,7 +111,7 @@ class NeuMF(nn.Module):
         item_embedding_mf = self.embedding_item_mf(item_indices)
 
         mlp_vector = torch.cat([user_embedding_mlp, item_embedding_mlp], dim=-1)  # the concat latent vector
-        mf_vector =torch.mul(user_embedding_mf, item_embedding_mf)
+        mf_vector = torch.mul(user_embedding_mf, item_embedding_mf)
 
         for idx, _ in enumerate(range(len(self.fc_layers))):
             mlp_vector = self.fc_layers[idx](mlp_vector)
