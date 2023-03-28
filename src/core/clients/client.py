@@ -1,14 +1,17 @@
 import argparse
 from collections import OrderedDict
 from datetime import datetime
+from typing import List
 
 import flwr as fl
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import DataLoader, random_split, Subset
 from torchvision.datasets import CIFAR10
 from tqdm.auto import tqdm
+import numpy as np
 
 from src.core.model.testing_model import Net
 
@@ -86,19 +89,22 @@ class NCFClient(fl.client.NumPyClient):
         return loss, accuracy
 
     def get_parameters(self, config):
+        print(f"[Client {self.cid}] get_parameters")
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
-    def set_parameters(self, parameters):
+    def set_parameters(self, parameters: List[np.ndarray]):
         params_dict = zip(self.model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.model.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
+        print(f"[Client {self.cid}] fit, config: {config}")
         self.set_parameters(parameters)
         self.train(epochs=config['local_epochs'], server_round=config['server_round'])
         return self.get_parameters(config={}), self.num_examples["trainset"], {}
 
     def evaluate(self, parameters, config):
+        print(f"[Client {self.cid}] evaluate, config: {config}")
         self.set_parameters(parameters)
         # TODO : Change to Get the Hit Ratio and NDCG
         loss, accuracy = self.test()
