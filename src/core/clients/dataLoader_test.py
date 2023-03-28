@@ -1,9 +1,8 @@
+import numpy as np
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, random_split, Subset
 from torchvision.datasets import CIFAR10
-import numpy as np
-
 
 
 def load_datasets(num_clients: int):
@@ -13,7 +12,6 @@ def load_datasets(num_clients: int):
     )
     trainset = CIFAR10("../clients/", train=True, download=True, transform=transform)
     testset = CIFAR10("../clients/", train=False, download=True, transform=transform)
-
 
     # Split training set into `num_clients` partitions to simulate different local datasets
     datasets = []
@@ -47,16 +45,14 @@ def load_datasets(num_clients: int):
     return trainloaders, valloaders, testloader
 
 
-# def load_data():
-#     """Load CIFAR-10 (training and test set)."""
-#     transform = transforms.Compose(
-#         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-#     )
-#     trainset = CIFAR10(".", train=True, download=True, transform=transform)
-#     testset = CIFAR10(".", train=False, download=True, transform=transform)
-#     trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
-#     testloader = DataLoader(testset, batch_size=32)
-#     num_examples = {"trainset": len(trainset), "testset": len(testset)}
-#     return trainloader, testloader, num_examples
-
-
+def load_data():
+    """Load CIFAR-10 (training and test set)."""
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+    )
+    trainset = CIFAR10(root="./src/core/clients/", train=True, download=True, transform=transform)
+    testset = CIFAR10(root="./src/core/clients/", train=False, download=True, transform=transform)
+    trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
+    testloader = DataLoader(testset, batch_size=32)
+    num_examples = {"trainset": len(trainset), "testset": len(testset)}
+    return trainloader, testloader, num_examples

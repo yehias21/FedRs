@@ -4,31 +4,16 @@ from datetime import datetime
 from typing import List
 
 import flwr as fl
+import numpy as np
 import torch
-import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader, random_split, Subset
-from torchvision.datasets import CIFAR10
 from tqdm.auto import tqdm
-import numpy as np
 
+from src.core.clients.dataLoader_test import load_data
 from src.core.model.testing_model import Net
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-def load_data():
-    """Load CIFAR-10 (training and test set)."""
-    transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-    )
-    trainset = CIFAR10(root="./src/core/clients/", train=True, download=True, transform=transform)
-    testset = CIFAR10(root="./src/core/clients/", train=False, download=True, transform=transform)
-    trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
-    testloader = DataLoader(testset, batch_size=32)
-    num_examples = {"trainset": len(trainset), "testset": len(testset)}
-    return trainloader, testloader, num_examples
 
 
 class NCFClient(fl.client.NumPyClient):
@@ -40,17 +25,20 @@ class NCFClient(fl.client.NumPyClient):
                  num_examples,
                  log: bool = False
                  ):
+        print(f'Creating Client {self.cid} ..')
         self.cid = cid
-        self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H:%M}/Client{self.cid}")
-        print('Starting Client', self.cid)
+        self.log = log
+        if self.log:
+            self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H:%M}/Client{self.cid}")
+
         self.model = model
         self.trainloader = trainloader
         self.testloader = testloader
+
         self.batch_size = 32
         self.learning_rate = 0.001
         self.num_examples = num_examples
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)
-        self.log = log
 
     def train(self, epochs, server_round):
         """Train the model on the training set."""
@@ -93,6 +81,7 @@ class NCFClient(fl.client.NumPyClient):
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
     def set_parameters(self, parameters: List[np.ndarray]):
+        print(f"[Client {self.cid}] set_parameters")
         params_dict = zip(self.model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.model.load_state_dict(state_dict, strict=True)
@@ -118,6 +107,7 @@ if __name__ == '__main__':
     parser.add_argument('--cid', type=int, required=True)
     parser.add_argument('--log', type=bool, required=False, default=False)
     args = parser.parse_args()
+
     # Load model and data
     net = Net().to(DEVICE)
     trainloader, testloader, num_examples = load_data()
