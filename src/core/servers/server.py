@@ -2,10 +2,12 @@ from datetime import datetime
 from typing import List, Tuple
 
 import flwr as fl
+import torch
 from flwr.common import Metrics
 from torch.utils.tensorboard import SummaryWriter
 
 from src.core.clients.client import NCFClient
+from src.core.clients.dataLoader_test import load_datasets
 from src.core.model.testing_model import Net
 
 SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H:%M}/Server")
@@ -60,29 +62,29 @@ if __name__ == '__main__':
                                          on_fit_config_fn=fit_config,
                                          on_evaluate_config_fn=eval_config,
                                          )
-    # Start Flower server
-    fl.server.start_server(
-        server_address="localhost:8080",
-        config=fl.server.ServerConfig(num_rounds=3),
-        strategy=strategy,
-    )
-
-    # DEVICE = torch.device("cpu")
-    # # Specify client resources if you need GPU (defaults to 1 CPU and 0 GPU)
-    # client_resources = None
-    # if DEVICE.type == "cuda":
-    #     client_resources = {"num_gpus": 1}
-    #
-    # NUM_CLIENTS = 10
-    #
-    # # Create datasets
-    # trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS)
-    # # print(len(trainloaders))
-    #
-    # fl.simulation.start_simulation(
-    #     client_fn=numpyclient_fn,
-    #     num_clients=5,
+    # # Start Flower server
+    # fl.server.start_server(
+    #     server_address="localhost:8080",
+    #     config=fl.server.ServerConfig(num_rounds=3),
     #     strategy=strategy,
-    #     config=fl.server.ServerConfig(num_rounds=2),
-    #     client_resources=client_resources,
     # )
+
+    DEVICE = torch.device("cpu")
+    # Specify client resources if you need GPU (defaults to 1 CPU and 0 GPU)
+    client_resources = None
+    if DEVICE.type == "cuda":
+        client_resources = {"num_gpus": 1}
+
+    NUM_CLIENTS = 10
+
+    # Create datasets
+    trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS)
+    # print(len(trainloaders))
+
+    fl.simulation.start_simulation(
+        client_fn=numpyclient_fn,
+        num_clients=5,
+        strategy=strategy,
+        config=fl.server.ServerConfig(num_rounds=2),
+        client_resources=client_resources,
+    )
