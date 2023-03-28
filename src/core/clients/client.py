@@ -25,8 +25,8 @@ class NCFClient(fl.client.NumPyClient):
                  num_examples,
                  log: bool = False
                  ):
-        print(f'Creating Client {self.cid} ..')
         self.cid = cid
+        print(f'Creating Client {self.cid} ..')
         self.log = log
         if self.log:
             self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H:%M}/Client{self.cid}")
@@ -66,15 +66,19 @@ class NCFClient(fl.client.NumPyClient):
         criterion = torch.nn.CrossEntropyLoss()
         correct, total, loss = 0, 0, 0.0
         with torch.no_grad():
-            for data in tqdm(self.testloader, desc=f"Client[{self.cid}] Testing .. "):
-                images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
-                outputs = self.model(images)
-                loss += criterion(outputs, labels).item()
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-        accuracy = correct / total
-        return loss, accuracy
+            test_res = dict()
+            for label, dataloader in [["Test", self.testloader], ["Train", self.trainloader]]:
+                for data in tqdm(dataloader, desc=f"Client[{self.cid}] Testing {label} Data .. "):
+                    images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
+                    outputs = self.model(images)
+                    loss += criterion(outputs, labels).item()
+                    _, predicted = torch.max(outputs.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+                accuracy = correct / total
+                test_res[label] = {"accuracy": accuracy,
+                                   "loss": loss}
+        return test_res
 
     def get_parameters(self, config):
         print(f"[Client {self.cid}] get_parameters")
@@ -96,10 +100,21 @@ class NCFClient(fl.client.NumPyClient):
         print(f"[Client {self.cid}] evaluate, config: {config}")
         self.set_parameters(parameters)
         # TODO : Change to Get the Hit Ratio and NDCG
-        loss, accuracy = self.test()
-        return float(loss), self.num_examples["testset"], {"accuracy": float(accuracy),
-                                                           "loss": float(loss),
-                                                           "server_round": config["server_round"]}
+        test_res = self.test()
+
+        loss_test = test_res["Test"]["loss"]
+        accuracy_test = test_res["Test"]["accuracy"]
+
+        loss_train = test_res["Train"]["loss"]
+        accuracy_train = test_res["Train"]["accuracy"]
+
+        return float(loss_test), self.num_examples["testset"], {"accuracy_test": float(accuracy_test),
+                                                                "loss_test": float(loss_test),
+                                                                "num_examples_test": self.num_examples["testset"],
+                                                                "accuracy_train": float(accuracy_train),
+                                                                "loss_train": float(loss_train),
+                                                                "num_examples_train": self.num_examples["trainset"],
+                                                                "server_round": config["server_round"]}
 
 
 if __name__ == '__main__':

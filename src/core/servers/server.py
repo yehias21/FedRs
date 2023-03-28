@@ -16,15 +16,16 @@ SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H:%M}/Ser
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     server_round = metrics[0][1]["server_round"]
-    # Multiply accuracy of each client by number of examples used
-    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
-    losses = [num_examples * m["loss"] for num_examples, m in metrics]
-    examples = [num_examples for num_examples, _ in metrics]
-    # Aggregate and return custom metric (weighted average)
-    round_accuracy = sum(accuracies) / sum(examples)
-    round_loss = sum(losses) / sum(examples)
-    SERVER_WRITER.add_scalar('loss', round_loss, server_round)
-    SERVER_WRITER.add_scalar('accuracy', round_accuracy, server_round)
+    for label in ["test"]:
+        # Multiply accuracy of each client by number of examples used
+        accuracies = [m[f"num_examples_{label}"] * m[f"accuracy_{label}"] for _, m in metrics]
+        losses = [m[f"num_examples_{label}"] * m[f"loss_{label}"] for _, m in metrics]
+        examples = [m[f"num_examples_{label}"] for _, m in metrics]
+        # Aggregate and return custom metric (weighted average)
+        round_accuracy = sum(accuracies) / sum(examples)
+        round_loss = sum(losses) / sum(examples)
+        SERVER_WRITER.add_scalar(f'Loss/{label}', round_loss, server_round)
+        SERVER_WRITER.add_scalar(f'Accuracy/{label}', round_accuracy, server_round)
     return {"accuracy": round_accuracy}
 
 
@@ -33,7 +34,7 @@ def fit_config(server_round: int):
     """
     config = {
         "server_round": server_round,  # The current round of federated learning
-        "local_epochs": 1,
+        "local_epochs": 2,
     }
     return config
 
@@ -53,7 +54,12 @@ def numpyclient_fn(cid) -> NCFClient:
     trainloader = trainloaders[int(cid)]
     valloader = valloaders[int(cid)]
     num_examples = {"trainset": len(trainloader), "testset": len(valloader)}
-    return NCFClient(cid=cid, model=net, trainloader=trainloader, testloader=valloader, num_examples=num_examples)
+    return NCFClient(cid=cid,
+                     model=net,
+                     trainloader=trainloader,
+                     testloader=valloader,
+                     num_examples=num_examples,
+                     )
 
 
 if __name__ == '__main__':
@@ -83,8 +89,8 @@ if __name__ == '__main__':
 
     fl.simulation.start_simulation(
         client_fn=numpyclient_fn,
-        num_clients=5,
+        num_clients=2,
         strategy=strategy,
-        config=fl.server.ServerConfig(num_rounds=2),
+        config=fl.server.ServerConfig(num_rounds=10),
         client_resources=client_resources,
     )

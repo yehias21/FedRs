@@ -10,8 +10,8 @@ def load_datasets(num_clients: int):
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     )
-    trainset = CIFAR10("../clients/", train=True, download=True, transform=transform)
-    testset = CIFAR10("../clients/", train=False, download=True, transform=transform)
+    trainset = CIFAR10("./src/core/clients/", train=True, download=True, transform=transform)
+    testset = CIFAR10("./src/core/clients/", train=False, download=True, transform=transform)
 
     # Split training set into `num_clients` partitions to simulate different local datasets
     datasets = []
