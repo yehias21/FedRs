@@ -46,7 +46,8 @@ class NCFClient(fl.client.NumPyClient):
         n_total_steps = len(self.trainloader)
         for epoch in range(epochs):
             running_loss = 0.0
-            for i, (images, labels) in enumerate(pbar := tqdm(self.trainloader)):
+            pbar = tqdm(self.trainloader)
+            for i, (images, labels) in enumerate(pbar):
                 images, labels = images.to(DEVICE), labels.to(DEVICE)
                 self.optimizer.zero_grad()
                 loss = criterion(self.model(images), labels)

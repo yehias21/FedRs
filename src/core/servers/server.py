@@ -10,7 +10,7 @@ from src.core.clients.client import NCFClient
 from src.core.clients.dataLoader_test import load_datasets
 from src.core.model.testing_model import Net
 
-SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H:%M}/Server")
+SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H_%M}/Server")
 
 
 # Define metric aggregation function
@@ -64,10 +64,18 @@ def numpyclient_fn(cid) -> NCFClient:
 
 if __name__ == '__main__':
     # Define strategy
-    strategy = fl.server.strategy.FedAvg(evaluate_metrics_aggregation_fn=weighted_average,
+    strategy = fl.server.strategy.FedProx(proximal_mu=0.01,
+                                          evaluate_metrics_aggregation_fn=weighted_average,
                                          on_fit_config_fn=fit_config,
                                          on_evaluate_config_fn=eval_config,
                                          )
+
+    # strategy = fl.server.strategy.FedAvg(evaluate_metrics_aggregation_fn=weighted_average,
+    #                                      on_fit_config_fn=fit_config,
+    #                                      on_evaluate_config_fn=eval_config,
+    #                                      )
+
+
     # # Start Flower server
     # fl.server.start_server(
     #     server_address="localhost:8080",
@@ -81,11 +89,10 @@ if __name__ == '__main__':
     if DEVICE.type == "cuda":
         client_resources = {"num_gpus": 1}
 
-    NUM_CLIENTS = 10
 
     # Create datasets
+    NUM_CLIENTS = 10
     trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS)
-    # print(len(trainloaders))
 
     fl.simulation.start_simulation(
         client_fn=numpyclient_fn,
