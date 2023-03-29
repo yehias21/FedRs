@@ -36,7 +36,7 @@ class SignatureRequestHandler(socketserver.BaseRequestHandler):
 class SecretShareRequestHandler(socketserver.BaseRequestHandler):
     U_1_num = 0
     ciphertexts_map = {}         # {u:{v1: ciphertexts, v2: ciphertexts}}
-    tags_map={}
+    # tags_map={}
     U_2 = []
 
     def handle(self) -> None:
@@ -51,10 +51,10 @@ class SecretShareRequestHandler(socketserver.BaseRequestHandler):
             if key not in SecretShareRequestHandler.ciphertexts_map:
                 SecretShareRequestHandler.ciphertexts_map[key] = {}
             SecretShareRequestHandler.ciphertexts_map[key][id] = value
-        for key, value in msg[2].items():
-            if key not in SecretShareRequestHandler.tags_map:
-                SecretShareRequestHandler.tags_map[key] = {}
-            SecretShareRequestHandler.tags_map[key][id] = value        
+        # for key, value in msg[2].items():
+        #     if key not in SecretShareRequestHandler.tags_map:
+        #         SecretShareRequestHandler.tags_map[key] = {}
+        #     SecretShareRequestHandler.tags_map[key][id] = value
 
         SecretShareRequestHandler.U_2.append(id)
 

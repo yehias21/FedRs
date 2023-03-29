@@ -151,15 +151,15 @@ class User:
 
             v_c_pk = self.ka_pub_keys_map[v]["c_pk"]
             shared_key = KA.agree(self.__c_sk, v_c_pk)
-            nonce = AE.gen()
-            logging.info('nonce:'+str(nonce))
-            ciphertext ,tag = AE.encrypt(shared_key, nonce, info)
-            logging.info('tag'+str(tag))
+            # nonce = AE.gen()
+            # logging.info('nonce:'+str(nonce))
+            mix = AE.encrypt(shared_key, info)
+            # logging.info('tag'+str(tag))
 
 
-            all_ciphertexts[v] = ciphertext
-            all_tags[v]=tag
-        msg = pickle.dumps([self.id, all_ciphertexts,all_tags])
+            all_ciphertexts[v] = mix
+            # all_tags[v]=tag
+        msg = pickle.dumps([self.id, all_ciphertexts])
 
         # send all shares of the s_sk and random seed to the server
         self.send(msg, host, port)
@@ -179,8 +179,11 @@ class User:
         conn, _ = sock.accept()
 
         data = SocketUtil.recv_msg(conn)
-        self.ciphertexts = pickle.loads(bytes(data[0]))
-        self.tags = pickle.loads(bytes(data[1]))
+        msg = pickle.loads(data)
+        for key, value in msg[0].items():
+            self.ciphertexts[key]= value
+        # self.ciphertexts = pickle.loads(bytes(data[0]))
+        # self.tags = pickle.loads(bytes(data[1]))
 
         logging.info("received ciphertext from the server")
 
@@ -292,7 +295,7 @@ class User:
             v_c_pk = self.ka_pub_keys_map[v]["c_pk"]
             shared_key = KA.agree(self.__c_sk, v_c_pk)
 
-            info = pickle.loads(AE.decrypt(shared_key, self.tags[v], self.ciphertexts[v]))
+            info = pickle.loads(AE.decrypt(shared_key, self.ciphertexts[v]))
 
             if v not in self.U_3:
                 # send the shares of s_sk to the server

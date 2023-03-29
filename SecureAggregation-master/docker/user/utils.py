@@ -88,27 +88,30 @@ class AE:
         return  nonce
 
     @staticmethod
-    def encrypt(key: bytes, nonce: bytes, plaintext: bytes) -> bytes:
-        cipher = AES.new(key, AES.MODE_GCM,nonce=nonce)
+    def encrypt(key: bytes, plaintext: bytes) -> bytes:
+        cipher = AES.new(key, AES.MODE_GCM)
+        nonce = cipher.nonce
         ciphertext , tag = cipher.encrypt_and_digest(plaintext)
+        mix = b''.join([ciphertext, tag, nonce])
 
-
-        return ciphertext ,tag
+        return mix
 
     @staticmethod
-    def decrypt(key: bytes, nonce: bytes, ciphertext: bytes) -> bytes:
+    def decrypt(key: bytes, mix : bytes) -> bytes:
 
-        with open('nonce','+r') as f:
-            nonce = bytes(f)
-        
-        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        try: 
-            plaintext = cipher.decrypt_and_verify(ciphertext)
-            logging.info("cipher decrypted succ")
+        nonce = mix[-16:]
+        tag = mix[-32:-16]
+        ciphertext = mix[:-32]
+        try:
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+            # print("Cipher decrypted succ")
+            return plaintext
+
         except:
-            logging.info("tag is not valid")
+            print("Tag is not valid")
+            return bytes(0)
 
-        return plaintext
 
 
 class KA:

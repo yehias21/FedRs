@@ -73,7 +73,7 @@ def share_keys(server, U_1, t, wait_time):
         logging.info("{} users have sent ciphertexts".format(len(U_2)))
 
         for u in U_2:
-            msg = pickle.dumps([SecretShareRequestHandler.ciphertexts_map[u],SecretShareRequestHandler.tags_map[u]])
+            msg = pickle.dumps([SecretShareRequestHandler.ciphertexts_map[u]])
             logging.info(len(msg))
             server.send(msg, "user" + u, 10001)
     else:
