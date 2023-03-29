@@ -9,8 +9,10 @@ from torch.utils.tensorboard import SummaryWriter
 from src.core.clients.client import NCFClient
 from src.core.clients.dataLoader_test import load_datasets
 from src.core.model.testing_model import Net
+from src.utils.utils import seed_everything, get_config
 
 SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H_%M}/Server")
+config = get_config()
 
 
 # Define metric aggregation function
@@ -32,27 +34,24 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 def fit_config(server_round: int):
     """Return training configuration dict for each round.
     """
-    config = {
+    return {
         "server_round": server_round,  # The current round of federated learning
-        "local_epochs": 2,
+        "local_epochs": int(config["Client"]['num_epochs']),
     }
-    return config
 
 
 def eval_config(server_round: int):
     """Return evaluation configuration dict for each round.
     """
-    config = {
+    return {
         "server_round": server_round,  # The current round of federated learning
     }
-    return config
 
 
 def numpyclient_fn(cid) -> NCFClient:
     net = Net().to(DEVICE)
     print("CID", cid)
-    trainloader = trainloaders[int(cid)]
-    valloader = valloaders[int(cid)]
+    trainloader, valloader = trainloaders[int(cid)], valloaders[int(cid)]
     num_examples = {"trainset": len(trainloader), "testset": len(valloader)}
     return NCFClient(cid=cid,
                      model=net,
@@ -63,25 +62,7 @@ def numpyclient_fn(cid) -> NCFClient:
 
 
 if __name__ == '__main__':
-    # Define strategy
-    strategy = fl.server.strategy.FedProx(proximal_mu=0.01,
-                                          evaluate_metrics_aggregation_fn=weighted_average,
-                                         on_fit_config_fn=fit_config,
-                                         on_evaluate_config_fn=eval_config,
-                                         )
-
-    # strategy = fl.server.strategy.FedAvg(evaluate_metrics_aggregation_fn=weighted_average,
-    #                                      on_fit_config_fn=fit_config,
-    #                                      on_evaluate_config_fn=eval_config,
-    #                                      )
-
-
-    # # Start Flower server
-    # fl.server.start_server(
-    #     server_address="localhost:8080",
-    #     config=fl.server.ServerConfig(num_rounds=3),
-    #     strategy=strategy,
-    # )
+    seed_everything(int(config["Common"]["seed"]))
 
     DEVICE = torch.device("cpu")
     # Specify client resources if you need GPU (defaults to 1 CPU and 0 GPU)
@@ -89,15 +70,25 @@ if __name__ == '__main__':
     if DEVICE.type == "cuda":
         client_resources = {"num_gpus": 1}
 
+    # Define strategy
+    strategy = fl.server.strategy.FedAvg(evaluate_metrics_aggregation_fn=weighted_average,
+                                         on_fit_config_fn=fit_config,
+                                         on_evaluate_config_fn=eval_config,
+                                         )
+    # # Start Flower server
+    # fl.server.start_server(
+    #     server_address="localhost:8080",
+    #     config=fl.server.ServerConfig(num_rounds=3),
+    #     strategy=strategy,
+    # )
 
     # Create datasets
-    NUM_CLIENTS = 10
-    trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS)
+    trainloaders, valloaders, testloader = load_datasets(int(config["Common"]["num_clients"]))
 
     fl.simulation.start_simulation(
         client_fn=numpyclient_fn,
-        num_clients=2,
+        num_clients=int(config["Common"]["num_clients"]),
         strategy=strategy,
-        config=fl.server.ServerConfig(num_rounds=10),
+        config=fl.server.ServerConfig(num_rounds=int(config["Server"]["num_rounds"])),
         client_resources=client_resources,
     )

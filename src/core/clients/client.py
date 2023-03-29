@@ -12,8 +12,10 @@ from tqdm.auto import tqdm
 
 from src.core.clients.dataLoader_test import load_data
 from src.core.model.testing_model import Net
+from src.utils.utils import get_config
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+config = get_config()
 
 
 class NCFClient(fl.client.NumPyClient):
@@ -36,9 +38,10 @@ class NCFClient(fl.client.NumPyClient):
         self.testloader = testloader
 
         self.batch_size = 32
-        self.learning_rate = 0.001
         self.num_examples = num_examples
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)
+        self.optimizer = torch.optim.SGD(self.model.parameters(),
+                                         lr=float(config["Client"]["learning_rate"]),
+                                         momentum=0.9)
 
     def train(self, epochs, server_round):
         """Train the model on the training set."""
