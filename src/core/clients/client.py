@@ -39,9 +39,8 @@ class NCFClient(fl.client.NumPyClient):
 
         self.batch_size = 32
         self.num_examples = num_examples
-        self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                         lr=float(config["Client"]["learning_rate"]),
-                                         momentum=0.9)
+        self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                          lr=float(config["Client"]["learning_rate"]))
 
     def train(self, epochs, server_round):
         """Train the model on the training set."""

@@ -74,6 +74,8 @@ if __name__ == '__main__':
     strategy = fl.server.strategy.FedAvg(evaluate_metrics_aggregation_fn=weighted_average,
                                          on_fit_config_fn=fit_config,
                                          on_evaluate_config_fn=eval_config,
+                                         fraction_fit=float(config["Server"]["fraction_fit"]),
+                                         fraction_evaluate=float(config["Server"]["fraction_evaluate"]),
                                          )
     # # Start Flower server
     # fl.server.start_server(
