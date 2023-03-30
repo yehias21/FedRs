@@ -12,8 +12,10 @@ from tqdm.auto import tqdm
 
 from src.core.clients.dataLoader_test import load_data
 from src.core.model.testing_model import Net
+from src.utils.utils import get_config
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+config = get_config()
 
 
 class NCFClient(fl.client.NumPyClient):
@@ -36,9 +38,9 @@ class NCFClient(fl.client.NumPyClient):
         self.testloader = testloader
 
         self.batch_size = 32
-        self.learning_rate = 0.001
         self.num_examples = num_examples
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)
+        self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                          lr=float(config["Client"]["learning_rate"]))
 
     def train(self, epochs, server_round):
         """Train the model on the training set."""
@@ -46,7 +48,8 @@ class NCFClient(fl.client.NumPyClient):
         n_total_steps = len(self.trainloader)
         for epoch in range(epochs):
             running_loss = 0.0
-            for i, (images, labels) in enumerate(pbar := tqdm(self.trainloader)):
+            pbar = tqdm(self.trainloader)
+            for i, (images, labels) in enumerate(pbar):
                 images, labels = images.to(DEVICE), labels.to(DEVICE)
                 self.optimizer.zero_grad()
                 loss = criterion(self.model(images), labels)
@@ -67,17 +70,16 @@ class NCFClient(fl.client.NumPyClient):
         correct, total, loss = 0, 0, 0.0
         with torch.no_grad():
             test_res = dict()
-            for label, dataloader in [["Test", self.testloader], ["Train", self.trainloader]]:
-                for data in tqdm(dataloader, desc=f"Client[{self.cid}] Testing {label} Data .. "):
-                    images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
-                    outputs = self.model(images)
-                    loss += criterion(outputs, labels).item()
-                    _, predicted = torch.max(outputs.data, 1)
-                    total += labels.size(0)
-                    correct += (predicted == labels).sum().item()
-                accuracy = correct / total
-                test_res[label] = {"accuracy": accuracy,
-                                   "loss": loss}
+            for data in tqdm(self.testloader, desc=f"Client[{self.cid}] Testing Test Data .. "):
+                images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
+                outputs = self.model(images)
+                loss += criterion(outputs, labels).item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+            accuracy = correct / total
+            test_res["Test"] = {"accuracy": accuracy,
+                                "loss": loss}
         return test_res
 
     def get_parameters(self, config):
@@ -105,16 +107,11 @@ class NCFClient(fl.client.NumPyClient):
         loss_test = test_res["Test"]["loss"]
         accuracy_test = test_res["Test"]["accuracy"]
 
-        loss_train = test_res["Train"]["loss"]
-        accuracy_train = test_res["Train"]["accuracy"]
-
         return float(loss_test), self.num_examples["testset"], {"accuracy_test": float(accuracy_test),
                                                                 "loss_test": float(loss_test),
                                                                 "num_examples_test": self.num_examples["testset"],
-                                                                "accuracy_train": float(accuracy_train),
-                                                                "loss_train": float(loss_train),
-                                                                "num_examples_train": self.num_examples["trainset"],
-                                                                "server_round": config["server_round"]}
+                                                                "server_round": config["server_round"]
+                                                                }
 
 
 if __name__ == '__main__':
