@@ -68,8 +68,8 @@ class NCFClient(fl.client.NumPyClient):
         """Test the network on the entire test set."""
         criterion = torch.nn.CrossEntropyLoss()
         correct, total, loss = 0, 0, 0.0
+        test_res = dict()
         with torch.no_grad():
-            test_res = dict()
             for data in tqdm(self.testloader, desc=f"Client[{self.cid}] Testing Test Data .. "):
                 images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
                 outputs = self.model(images)
@@ -108,7 +108,6 @@ class NCFClient(fl.client.NumPyClient):
         accuracy_test = test_res["Test"]["accuracy"]
 
         return float(loss_test), self.num_examples["testset"], {"accuracy_test": float(accuracy_test),
-                                                                "loss_test": float(loss_test),
                                                                 "num_examples_test": self.num_examples["testset"],
                                                                 "server_round": config["server_round"]
                                                                 }

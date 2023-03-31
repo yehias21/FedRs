@@ -16,3 +16,8 @@ def plot_metric_from_history(
     """
     for r, loss in hist.losses_distributed:
         tensorboard_writer.add_scalar(f'Loss/Test', loss, r)
+    # check if the metrics are present then plot.
+    if hist.metrics_distributed:
+        for metric in hist.metrics_distributed:
+            for r, value in hist.metrics_distributed[metric]:
+                tensorboard_writer.add_scalar(f'{metric}/Test', value, r)

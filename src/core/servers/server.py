@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import List, Tuple
 
 import flwr as fl
 import torch
+from flwr.common import Metrics
 from flwr.server.strategy import Strategy
 from torch.utils.tensorboard import SummaryWriter
 
@@ -16,23 +18,17 @@ config = utils.get_config()
 
 
 # Define metric aggregation function
-# def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-#     return {}
-# server_round = metrics[0][1]["server_round"]
-# for label in ["test"]:
-#     # Multiply accuracy of each client by number of examples used
-#     accuracies = [m[f"num_examples_{label}"] * m[f"accuracy_{label}"] for _, m in metrics]
-#     losses = [m[f"num_examples_{label}"] * m[f"loss_{label}"] for _, m in metrics]
-#     examples = [m[f"num_examples_{label}"] for _, m in metrics]
-#     # Aggregate and return custom metric (weighted average)
-#     round_accuracy = sum(accuracies) / sum(examples)
-#     # round_loss = sum(losses) / sum(examples)
-#     # SERVER_WRITER.add_scalar(f'Loss2/{label}', round_loss, server_round)
-#     # SERVER_WRITER.add_scalar(f'Accuracy/{label}', round_accuracy, server_round)
-# return {"accuracy": round_accuracy}
+def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    for label in ["test"]:
+        # Multiply accuracy of each client by number of examples used
+        accuracies = [m[f"num_examples_{label}"] * m[f"accuracy_{label}"] for _, m in metrics]
+        examples = [m[f"num_examples_{label}"] for _, m in metrics]
+        # Aggregate and return custom metric (weighted average)
+        round_accuracy = sum(accuracies) / sum(examples)
+    return {"Accuracy": round_accuracy}
 
 
-def numpyclient_fn(cid) -> NCFClient:
+def client_fn(cid) -> NCFClient:
     net = Net().to(DEVICE)
     print("CID", cid)
     trainloader, valloader = trainloaders[int(cid)], valloaders[int(cid)]
@@ -56,7 +52,7 @@ if __name__ == '__main__':
 
     # Define strategy
     strategy = fl.server.strategy.FedAvg(
-        # evaluate_metrics_aggregation_fn=weighted_average,
+        evaluate_metrics_aggregation_fn=weighted_average,
         on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
                                              "local_epochs": int(config["Client"]['num_epochs'])
                                              },
@@ -75,7 +71,7 @@ if __name__ == '__main__':
     trainloaders, valloaders, testloader = load_datasets(int(config["Common"]["num_clients"]))
 
     history = fl.simulation.start_simulation(
-        client_fn=numpyclient_fn,
+        client_fn=client_fn,
         num_clients=int(config["Common"]["num_clients"]),
         strategy=strategy,
         config=fl.server.ServerConfig(num_rounds=int(config["Server"]["num_rounds"])),
