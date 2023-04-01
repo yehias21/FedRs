@@ -25,7 +25,7 @@ class train(torch.utils.data.Dataset):
         else:
             item = random.choice(self.negative_list)
             rating = 0
-        return (torch.tensor(item, dtype=torch.short), torch.tensor(rating, dtype=torch.uint8))
+        return torch.tensor(item, dtype=torch.int), torch.tensor(rating, dtype=torch.uint8)
 
 
 class NCFloader:
@@ -83,7 +83,7 @@ def federate_data(args):
     # reindex
     # reindexed=_reindex(filtered)
     '''
-    # # write to federated dir
+    # write to federated dir
     # for group in reindexed.groupby("users"):
     for group in df.groupby("users"):
         user_id, user_data = group
