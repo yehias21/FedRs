@@ -1,5 +1,4 @@
 import argparse
-from collections import OrderedDict
 from datetime import datetime
 from typing import List
 
@@ -84,13 +83,11 @@ class NCFClient(fl.client.NumPyClient):
 
     def get_parameters(self, config):
         print(f"[Client {self.cid}] get_parameters")
-        return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        return self.model.get_parameters()
 
     def set_parameters(self, parameters: List[np.ndarray]):
         print(f"[Client {self.cid}] set_parameters")
-        params_dict = zip(self.model.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        self.model.load_state_dict(state_dict, strict=True)
+        self.model.set_parameters(parameters)
 
     def fit(self, parameters, config):
         print(f"[Client {self.cid}] fit, config: {config}")

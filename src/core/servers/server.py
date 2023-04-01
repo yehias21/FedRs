@@ -13,7 +13,6 @@ from src.core.clients.client import NCFClient
 from src.core.clients.dataLoader_test import load_datasets
 from src.core.model.testing_model import Net
 from src.utils import utils
-from src.utils.utils import read_latest_params
 
 SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Server")
 config = utils.get_config()
@@ -90,7 +89,7 @@ if __name__ == '__main__':
         on_evaluate_config_fn=lambda curr_round: {"server_round": curr_round},
         fraction_fit=float(config["Server"]["fraction_fit"]),
         fraction_evaluate=float(config["Server"]["fraction_evaluate"]),
-        initial_parameters=read_latest_params(),
+        initial_parameters=utils.read_latest_params(),
     )
     # # Start Flower server
     # fl.server.start_server(

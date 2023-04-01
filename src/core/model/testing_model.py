@@ -1,3 +1,7 @@
+from collections import OrderedDict
+from typing import List
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,3 +25,16 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
+    def get_parameters(self):
+        params = []
+        print(self.state_dict().items())
+        for _, val in self.state_dict().items():
+            params.append(val.cpu().numpy())
+        return params
+
+    def set_parameters(self, parameters: List[np.ndarray]):
+        print(parameters)
+        params_dict = zip(self.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        self.load_state_dict(state_dict, strict=True)
