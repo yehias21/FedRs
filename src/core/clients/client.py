@@ -31,7 +31,7 @@ class NCFClient(fl.client.NumPyClient):
         print(f'Creating Client {self.cid} ..')
         self.log = log
         if self.log:
-            self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y-%m-%d_%H:%M}/Client{self.cid}")
+            self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Client{self.cid}")
 
         self.model = model
         self.trainloader = trainloader
