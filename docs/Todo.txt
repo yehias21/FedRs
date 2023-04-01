@@ -20,4 +20,4 @@ View these links:
 - https://github.com/balanced-fl/Addressing-Class-Imbalance-FL/tree/master/FEMNIST-4-Losses/models
 ------------------------------------------------------------------------------------------------------------
 ## Features
-- 
+- Cluster the items and users
