@@ -25,7 +25,7 @@ class train(torch.utils.data.Dataset):
         else:
             item = random.choice(self.negative_list)
             rating = 0
-        return torch.tensor(item, dtype=torch.int), torch.tensor(rating, dtype=torch.uint8)
+        return torch.tensor(item, dtype=torch.int), torch.tensor(rating, dtype=torch.float)
 
 
 class NCFloader:

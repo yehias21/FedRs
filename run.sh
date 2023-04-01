@@ -5,7 +5,7 @@ export PYTHONPATH=.
 tmux kill-server
 
 tmux new-session -d -s "s"
-tmux send-keys -t "s" "conda activate py39;echo 'Starting Server !';python src/core/servers/server.py" Enter
+tmux send-keys -t "s" "conda activate py39;echo 'Starting Server !';python src/core/servers/server.py --sim 0" Enter
 
 tmux new-session -d -s "c1"
 tmux send-keys -t "c1" "conda activate py39;python src/core/clients/client.py --cid 1" Enter

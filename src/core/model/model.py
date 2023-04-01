@@ -1,3 +1,7 @@
+from collections import OrderedDict
+from typing import List
+
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -52,15 +56,27 @@ class NeuMF(nn.Module):
     def forward(self, item_indices):
         item_embedding_mlp = self.embedding_item_mlp(item_indices)
         item_embedding_mf = self.embedding_item_mf(item_indices)
-        mlp_vector = torch.cat([self.embedding_user_mlp(torch.tensor([0] * 20, dtype=torch.int)), item_embedding_mlp],
+        user_idx = torch.tensor([0] * item_indices.shape[0], dtype=torch.int)
+        mlp_vector = torch.cat([self.embedding_user_mlp(user_idx), item_embedding_mlp],
                                dim=-1)  # the concat latent vector
-        mf_vector = torch.mul(self.embedding_user_mf(torch.tensor([0] * 20, dtype=torch.int)), item_embedding_mf)
+        mf_vector = torch.mul(self.embedding_user_mf(user_idx), item_embedding_mf)
         for idx, _ in enumerate(range(len(self.fc_layers))):
             mlp_vector = self.fc_layers[idx](mlp_vector)
         vector = torch.cat([mlp_vector, mf_vector], dim=-1)
         logits = self.affine_output(vector)
         rating = self.logistic(logits)
         return rating.squeeze()
+
+    def get_parameters(self):
+        params = []
+        for _, val in self.state_dict().items():
+            params.append(val.cpu().numpy())
+        return params
+
+    def set_parameters(self, parameters: List[np.ndarray]):
+        params_dict = zip(self.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        self.load_state_dict(state_dict, strict=True)
 
 
 if __name__ == '__main__':

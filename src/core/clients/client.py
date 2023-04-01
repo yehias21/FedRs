@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 
-from src.core.clients.dataLoader_test import load_data
-from src.core.model.testing_model import Net
+from src.core.model.model import NeuMF
+from src.utils.mldataset import NCFloader
 from src.utils.utils import get_config
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -33,8 +33,8 @@ class NCFClient(fl.client.NumPyClient):
             self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Client{self.cid}")
 
         self.model = model
-        self.trainloader = trainloader
-        self.testloader = testloader
+        self.train_loader = trainloader
+        self.test_loader = testloader
 
         self.batch_size = 32
         self.num_examples = num_examples
@@ -44,14 +44,14 @@ class NCFClient(fl.client.NumPyClient):
     def train(self, epochs, server_round):
         """Train the model on the training set."""
         criterion = torch.nn.CrossEntropyLoss()
-        n_total_steps = len(self.trainloader)
+        n_total_steps = len(self.train_loader)
         for epoch in range(epochs):
             running_loss = 0.0
-            pbar = tqdm(self.trainloader)
-            for i, (images, labels) in enumerate(pbar):
-                images, labels = images.to(DEVICE), labels.to(DEVICE)
+            pbar = tqdm(self.train_loader)
+            for i, (x, y) in enumerate(pbar):
+                x, y = x.to(DEVICE), y.to(DEVICE)
                 self.optimizer.zero_grad()
-                loss = criterion(self.model(images), labels)
+                loss = criterion(self.model(x), y)
                 loss.backward()
                 self.optimizer.step()
                 running_loss += loss.item()
@@ -69,13 +69,13 @@ class NCFClient(fl.client.NumPyClient):
         correct, total, loss = 0, 0, 0.0
         test_res = dict()
         with torch.no_grad():
-            for data in tqdm(self.testloader, desc=f"Client[{self.cid}] Testing Test Data .. "):
-                images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
-                outputs = self.model(images)
-                loss += criterion(outputs, labels).item()
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+            for data in tqdm(self.test_loader, desc=f"Client[{self.cid}] Testing Test Data .. "):
+                x, y = data[0].to(DEVICE), data[1].to(DEVICE)
+                outputs = self.model(x)
+                loss += criterion(outputs, y).item()
+                # _, predicted = torch.max(outputs.data, 1)
+                total += y.size(0)
+                # correct += (predicted == y).sum().item()
             accuracy = correct / total
             test_res["Test"] = {"accuracy": accuracy,
                                 "loss": loss}
@@ -116,15 +116,17 @@ if __name__ == '__main__':
     parser.add_argument('--log', type=bool, required=False, default=False)
     args = parser.parse_args()
 
-    # Load model and data
-    net = Net().to(DEVICE)
-    trainloader, testloader, num_examples = load_data()
+    net = NeuMF(config).to(DEVICE)
+    loader = NCFloader(config, args.cid)
+    train_loader, test_loader = loader.get_train_instance(), loader.get_train_instance()
+    num_examples = {"trainset": len(train_loader),
+                    "testset": len(test_loader)}
 
     fl.client.start_numpy_client(server_address="localhost:8080",
                                  client=NCFClient(cid=args.cid,
                                                   model=net,
-                                                  trainloader=trainloader,
-                                                  testloader=testloader,
+                                                  trainloader=train_loader,
+                                                  testloader=test_loader,
                                                   num_examples=num_examples,
                                                   log=args.log
                                                   )

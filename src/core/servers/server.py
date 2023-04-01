@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 from typing import List, Tuple, Union, Dict, Optional
 
@@ -10,9 +11,9 @@ from flwr.server.strategy import Strategy
 from torch.utils.tensorboard import SummaryWriter
 
 from src.core.clients.client import NCFClient
-from src.core.clients.dataLoader_test import load_datasets
-from src.core.model.testing_model import Net
+from src.core.model.model import NeuMF
 from src.utils import utils
+from src.utils.mldataset import NCFloader
 
 SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Server")
 config = utils.get_config()
@@ -62,18 +63,23 @@ class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
 
 
 def client_fn(cid) -> NCFClient:
-    net = Net().to(DEVICE)
-    trainloader, valloader = trainloaders[int(cid)], valloaders[int(cid)]
-    num_examples = {"trainset": len(trainloader), "testset": len(valloader)}
-    return NCFClient(cid=cid,
+    net = NeuMF(config).to(DEVICE)
+    loader = NCFloader(config, int(cid))
+    train_loader, test_loader = loader.get_train_instance(), loader.get_train_instance()
+    num_examples = {"trainset": len(train_loader),
+                    "testset": len(test_loader)}
+    return NCFClient(cid=int(cid),
                      model=net,
-                     trainloader=trainloader,
-                     testloader=valloader,
+                     trainloader=train_loader,
+                     testloader=test_loader,
                      num_examples=num_examples,
                      )
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sim', type=int, default=1, required=False)
+    args = parser.parse_args()
     utils.seed_everything(int(config["Common"]["seed"]))
 
     DEVICE = torch.device("cpu")
@@ -91,20 +97,19 @@ if __name__ == '__main__':
         fraction_evaluate=float(config["Server"]["fraction_evaluate"]),
         initial_parameters=utils.read_latest_params(),
     )
-    # # Start Flower server
-    # fl.server.start_server(
-    #     server_address="localhost:8080",
-    #     config=fl.server.ServerConfig(num_rounds=3),
-    #     strategy=strategy,
-    # )
 
-    # Create datasets
-    trainloaders, valloaders, testloader = load_datasets(int(config["Common"]["num_clients"]))
-
-    history = fl.simulation.start_simulation(
-        client_fn=client_fn,
-        num_clients=int(config["Common"]["num_clients"]),
-        strategy=strategy,
-        config=fl.server.ServerConfig(num_rounds=int(config["Server"]["num_rounds"])),
-        client_resources=client_resources,
-    )
+    # Start Flower server
+    if args.sim:
+        history = fl.simulation.start_simulation(
+            client_fn=client_fn,
+            num_clients=int(config["Common"]["num_clients"]),
+            strategy=strategy,
+            config=fl.server.ServerConfig(num_rounds=int(config["Server"]["num_rounds"])),
+            client_resources=client_resources,
+        )
+    else:
+        fl.server.start_server(
+            server_address="localhost:8080",
+            config=fl.server.ServerConfig(num_rounds=3),
+            strategy=strategy,
+        )
