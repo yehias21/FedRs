@@ -4,6 +4,7 @@ import shutil
 
 import pandas as pd
 import torch
+from torch.utils.data import DataLoader
 
 from src.utils.utils import get_config
 
@@ -41,14 +42,16 @@ class NCFloader:
 
     def get_train_instance(self, batch_size=5, workers=1):
         train_data = train(self.positive, self.neg, int(self.args['dataloader']['neg_samples']) + 1)
-        return torch.utils.data.DataLoader(train_data,
-                                           batch_size=batch_size * (int(self.args['dataloader']['neg_samples']) + 1),
-                                           shuffle=True)  # , num_workers=workers)
+        return DataLoader(train_data,
+                          batch_size=batch_size * (int(self.args['dataloader']['neg_samples']) + 1),
+                          shuffle=True)
 
     def get_test_instance(self, workers=1):
         test_list = [self.test[0]]
         test_list.extend(random.sample(list(self.neg), 99))
-        return torch.utils.data.DataLoader(test_list, batch_size=100)  # , num_workers=workers)
+        test_list = torch.tensor(test_list, dtype=torch.int)
+        return DataLoader(test_list,
+                          batch_size=100)
 
 
 def _dfFilter(df):
@@ -94,7 +97,7 @@ def federate_data(args):
 
 if __name__ == '__main__':
     config = get_config()
-    # federate_data(config)
+    federate_data(config)
     loader = NCFloader(config, 1)
     train_loader = loader.get_train_instance()
     test_loader = loader.get_test_instance()

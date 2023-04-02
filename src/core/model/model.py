@@ -54,6 +54,8 @@ class NeuMF(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, item_indices):
+        # FIXME: off-by-one error in item indices in the data loader
+        item_indices -= 1
         item_embedding_mlp = self.embedding_item_mlp(item_indices)
         item_embedding_mf = self.embedding_item_mf(item_indices)
         user_idx = torch.tensor([0] * item_indices.shape[0], dtype=torch.int)
