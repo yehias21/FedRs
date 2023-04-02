@@ -95,6 +95,9 @@ if __name__ == '__main__':
 
     # Start Flower server
     if args.sim:
+        config_str = f'num_clients={int(config["Common"]["num_clients"])}\n' \
+                     f'learning_rate={config["Client"]["learning_rate"]}'
+        SERVER_WRITER.add_text('Configuration', config_str)
         history = fl.simulation.start_simulation(
             client_fn=client_fn,
             num_clients=int(config["Common"]["num_clients"]),

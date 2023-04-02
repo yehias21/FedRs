@@ -54,7 +54,7 @@ class NeuMF(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, item_indices):
-        # FIXME: off-by-one error in item indices in the data loader
+        # FIXME: off-by-one error in item indices in the data loader [Issue #9]
         item_indices -= 1
         item_embedding_mlp = self.embedding_item_mlp(item_indices)
         item_embedding_mf = self.embedding_item_mf(item_indices)
@@ -71,13 +71,24 @@ class NeuMF(nn.Module):
 
     def get_parameters(self):
         params = []
-        for _, val in self.state_dict().items():
+        excluded_params = ['embedding_user_mlp.weight', 'embedding_user_mf.weight']
+        for item, val in self.state_dict().items():
+            if item in excluded_params:
+                continue
             params.append(val.cpu().numpy())
         return params
 
     def set_parameters(self, parameters: List[np.ndarray]):
-        params_dict = zip(self.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        param_names = list(self.state_dict().keys())
+        excluded_params = ['embedding_user_mlp.weight', 'embedding_user_mf.weight']
+        state_dict = OrderedDict()
+        i = 0
+        for key in param_names:
+            if key not in excluded_params:
+                state_dict[key] = torch.tensor(parameters[i])
+                i += 1
+            else:
+                state_dict[key] = self.state_dict()[key]
         self.load_state_dict(state_dict, strict=True)
 
 
