@@ -1,4 +1,5 @@
 import argparse
+import os.path
 from datetime import datetime
 from typing import List
 
@@ -29,21 +30,20 @@ class NCFClient(fl.client.NumPyClient):
                  log: bool = False
                  ):
         seed_everything(int(config["Common"]["seed"]))
-        self.device = device
         self.cid = cid
-        print(f'Creating Client {self.cid} ..')
+        # print(f'Creating Client {self.cid} ..')
+        self.device = device
         self.log = log
         if self.log:
             self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Client{self.cid}")
-
         self.model = model
         self.train_loader = trainloader
         self.test_loader = testloader
-
         self.batch_size = 32
         self.num_examples = num_examples
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=float(config["Client"]["learning_rate"]))
+        self.load_client_state()
 
     def train(self, epochs, server_round) -> float:
         """Train the model on the training set."""
@@ -79,6 +79,7 @@ class NCFClient(fl.client.NumPyClient):
         # print(f"[Client {self.cid}] fit, config: {config}")
         self.set_parameters(parameters)
         loss = self.train(epochs=config['local_epochs'], server_round=config['server_round'])
+        self.save_client_state()
         return self.get_parameters(config={}), self.num_examples["trainset"], {'loss': loss}
 
     def evaluate(self, parameters, config):
@@ -88,6 +89,23 @@ class NCFClient(fl.client.NumPyClient):
                                test_loader=self.test_loader,
                                device=self.device)
         return 0.0, self.num_examples["testset"], metrics
+
+    def save_client_state(self):
+        save_path = os.path.join("./checkpoints", "clients")
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        torch.save({
+            'model': self.model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+        }, os.path.join(save_path, f"{self.cid}.pth"))
+
+    def load_client_state(self):
+        checkpoint_path = os.path.join("./checkpoints", "clients", f"{self.cid}.pth")
+        if os.path.exists(checkpoint_path):
+            checkpoint = torch.load(checkpoint_path)
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.model.load_state_dict(checkpoint['model'])
 
 
 def client_fn(cid) -> NCFClient:
