@@ -40,7 +40,7 @@ class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
 
         # Saving the Parameters
         if results and server_round % 10 == 0:
-            print(f"Saving round {server_round} aggregated params ...")
+            # print(f"Saving round {server_round} aggregated params ...")
             aggregated_ndarrays: List[np.ndarray] = fl.common.parameters_to_ndarrays(aggregated_parameters)
             # np.savez_compressed(f"./checkpoints/{datetime.now():%Y%m%d_%H%M%S}_server-round-{server_round}-weights.npz",
             #                     *aggregated_ndarrays)
@@ -90,14 +90,17 @@ if __name__ == '__main__':
         on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
                                              "local_epochs": int(config["Client"]['num_epochs'])},
         on_evaluate_config_fn=lambda curr_round: {"server_round": curr_round},
-        initial_parameters=None,  # utils.read_latest_params(),
+        initial_parameters=None,
     )
 
     # Start Flower server
     if args.sim:
-        config_str = f'num_clients={int(config["Common"]["num_clients"])}\n' \
-                     f'learning_rate={config["Client"]["learning_rate"]}'
+        config_str = f'num_clients={int(config["Common"]["num_clients"])},' \
+                     f'learning_rate={config["Client"]["learning_rate"]},' \
+                     f'local epochs={config["Client"]["num_epochs"]}'
         SERVER_WRITER.add_text('Configuration', config_str)
+        strategy.fraction_fit = 120 / int(config["Common"]["num_clients"])
+        strategy.fraction_evaluate = 120 / int(config["Common"]["num_clients"])
         history = fl.simulation.start_simulation(
             client_fn=client_fn,
             num_clients=int(config["Common"]["num_clients"]),
