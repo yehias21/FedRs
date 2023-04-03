@@ -29,6 +29,8 @@ class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
         if not results:
             return None, {}
 
+        updated_items_vectors = [eval(r.metrics['updated_items']) for _, r in results]
+
         # Call aggregate_fit from base class (FedAvg) to aggregate parameters and metrics
         aggregated_parameters, aggregated_metrics = super().aggregate_fit(server_round, results, failures)
 

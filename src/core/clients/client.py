@@ -49,24 +49,24 @@ class NCFClient(fl.client.NumPyClient):
         criterion = torch.nn.CrossEntropyLoss()
         n_total_steps = len(self.train_loader)
         running_loss = 0.0
-        updated_items = [0] * int(config['ml_1m']['total_items'])
+        updated_items = torch.zeros(int(config['ml_1m']['total_items']), dtype=torch.int)
         for epoch in range(epochs):
             pbar = self.train_loader
             for i, (x, y) in enumerate(pbar):
                 x, y = x.to(DEVICE), y.to(DEVICE)
-                # updated_items[x] = 1
                 self.optimizer.zero_grad()
                 loss = criterion(self.model(x), y)
                 loss.backward()
                 self.optimizer.step()
                 running_loss += loss.item()
+                updated_items.scatter_(0, x.to(torch.int64), 1)
                 # pbar.set_description(f"Round[{server_round}], Client[{self.cid}], Epoch [{epoch + 1}/{epochs}]")
                 if (i + 1) % 100 == 0:
                     if self.log:
                         self.writer.add_scalar("running_loss",
                                                running_loss / 100,
                                                (server_round - 1) * (epoch + 1) * n_total_steps + i)
-        return running_loss / epochs, updated_items
+        return running_loss / epochs, updated_items.tolist()
 
     def get_parameters(self, config):
         # print(f"[Client {self.cid}] get_parameters")
@@ -81,6 +81,8 @@ class NCFClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         loss, updated_items = self.train(epochs=config['local_epochs'],
                                          server_round=config['server_round'])
+        # FIXME: improve the serialization and send <bytes> instead of <str>
+        updated_items = str(updated_items)
         self.save_client_state()
         return self.get_parameters(config={}), self.num_examples["trainset"], {'loss': loss,
                                                                                'updated_items': updated_items,
