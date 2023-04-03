@@ -1,82 +1,17 @@
 import argparse
 from datetime import datetime
-from typing import List, Tuple, Union, Dict, Optional
 
 import flwr as fl
-import numpy as np
 import torch
-from flwr.common import Metrics, FitRes, Scalar, Parameters, EvaluateRes
-from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import Strategy
 from torch.utils.tensorboard import SummaryWriter
 
 from src.core.clients.client import client_fn
 from src.utils import utils
 
+from src.core.servers.serverFedWAvg import SaveFedAvgStrategy
+
 SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Server")
 config = utils.get_config()
-
-
-class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
-    def aggregate_fit(
-            self,
-            server_round: int,
-            results: List[Tuple[fl.server.client_proxy.ClientProxy, fl.common.FitRes]],
-            failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
-    ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
-        """Aggregate Training Loss using weighted average and save Server checkpoints every 10 rounds."""
-
-        if not results:
-            return None, {}
-
-        updated_items_vectors = [eval(r.metrics['updated_items']) for _, r in results]
-
-        # Call aggregate_fit from base class (FedAvg) to aggregate parameters and metrics
-        aggregated_parameters, aggregated_metrics = super().aggregate_fit(server_round, results, failures)
-
-        # Calculating aggregated loss
-        examples = [r.num_examples for _, r in results]
-        losses = [r.metrics[f"loss"] * r.num_examples for _, r in results]
-        round_loss = sum(losses) / sum(examples)
-        SERVER_WRITER.add_scalar(f'Loss/Train', round_loss, server_round)
-
-        # Saving the Parameters
-        if results and server_round % 10 == 0:
-            # print(f"Saving round {server_round} aggregated params ...")
-            aggregated_ndarrays: List[np.ndarray] = fl.common.parameters_to_ndarrays(aggregated_parameters)
-            # np.savez_compressed(f"./checkpoints/{datetime.now():%Y%m%d_%H%M%S}_server-round-{server_round}-weights.npz",
-            #                     *aggregated_ndarrays)
-
-        return aggregated_parameters, {"loss": round_loss}
-
-    def aggregate_evaluate(
-            self,
-            server_round: int,
-            results: List[Tuple[ClientProxy, EvaluateRes]],
-            failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
-    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
-        """Aggregate evaluation metrics using weighted average."""
-
-        if not results:
-            return None, {}
-
-        # Call aggregate_evaluate from base class (FedAvg) to aggregate loss and metrics
-        aggregated_loss, aggregated_metrics = super().aggregate_evaluate(server_round, results, failures)
-
-        examples = [r.metrics[f"num_examples"] for _, r in results]
-
-        # Multiply accuracy of each client by number of examples used
-        ndcgs = [r.metrics[f"num_examples"] * r.metrics[f"NDCG"] for _, r in results]
-        round_ndcg = sum(ndcgs) / sum(examples)
-        SERVER_WRITER.add_scalar(f'Evaluation/NDCG', round_ndcg, server_round)
-
-        hrs = [r.metrics[f"num_examples"] * r.metrics[f"HR"] for _, r in results]
-        round_hr = sum(hrs) / sum(examples)
-        SERVER_WRITER.add_scalar(f'Evaluation/HR', round_hr, server_round)
-
-        # Return aggregated metrics.
-        return aggregated_loss, {"NDCG": round_ndcg,
-                                 "HR": round_hr}
 
 
 if __name__ == '__main__':
