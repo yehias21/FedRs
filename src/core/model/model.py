@@ -9,8 +9,6 @@ from src.utils.mldataset import NCFloader
 from src.utils.utils import get_config
 
 
-# TODO: run the model in the fed environment
-# TODO: assembly
 # TODO: work on the problem of user tensors & gradient updates
 
 class NeuMF(nn.Module):

@@ -81,11 +81,9 @@ class NCFClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         loss, updated_items = self.train(epochs=config['local_epochs'],
                                          server_round=config['server_round'])
-        # FIXME: improve the serialization and send <bytes> instead of <str>
-        updated_items = str(updated_items)
         self.save_client_state()
         return self.get_parameters(config={}), self.num_examples["trainset"], {'loss': loss,
-                                                                               'updated_items': updated_items,
+                                                                               'updated_items': bytes(updated_items),
                                                                                }
 
     def evaluate(self, parameters, config):
@@ -97,6 +95,7 @@ class NCFClient(fl.client.NumPyClient):
         return 0.0, self.num_examples["testset"], metrics
 
     def save_client_state(self):
+        # TODO: Reduce the checkpoint size
         save_path = os.path.join("./checkpoints", "clients")
         if not os.path.exists(save_path):
             os.makedirs(save_path)
