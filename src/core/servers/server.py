@@ -6,13 +6,13 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from src.core.clients.client import client_fn
-from src.utils import utils
-
 from src.core.servers.serverFedWAvg import SaveFedAvgStrategy
+from src.utils import utils
 
 SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Server")
 config = utils.get_config()
 
+# TODO: Checkpointing on item embeddings and model parameters
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

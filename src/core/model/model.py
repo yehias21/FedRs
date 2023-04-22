@@ -18,6 +18,7 @@ class NeuMF(nn.Module):
         self.factor_num_mf = int(args['model']['latent'])
         self.layers = eval(args['model']['layers'])
         self.factor_num_mlp = self.layers[0] // 2
+        # TODO: Dropout & BN is not implemented yet
         # self.dropout = args.dropout
 
         self.embedding_user_mlp = nn.Embedding(num_embeddings=1, embedding_dim=self.factor_num_mlp)
@@ -92,7 +93,6 @@ class NeuMF(nn.Module):
 
 if __name__ == '__main__':
     config = get_config()
-    # get some random training images
     loader = NCFloader(config, 1)
     train_loader = loader.get_train_instance()
     model = NeuMF(config)

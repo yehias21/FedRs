@@ -1,15 +1,38 @@
-import flwr as fl
-from flwr.common import FitRes, Scalar, Parameters, EvaluateRes, parameters_to_ndarrays, ndarrays_to_parameters
-from flwr.server.client_proxy import ClientProxy
-
-import numpy as np
-from typing import List, Tuple, Union, Dict, Optional
-from flwr.server.strategy import Strategy
-from flwr.server.strategy.aggregate import aggregate
-from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from functools import reduce
+from typing import List, Tuple, Union, Dict, Optional
+
+import flwr as fl
+import numpy as np
+import torch
+from flwr.common import FitRes, Scalar, Parameters, EvaluateRes, parameters_to_ndarrays, ndarrays_to_parameters, \
+    NDArrays
+from flwr.server.client_proxy import ClientProxy
+from flwr.server.strategy import Strategy
+from torch import Tensor
+from torch.utils.tensorboard import SummaryWriter
 
 SERVER_WRITER = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Server")
+
+
+def aggregate(results: List[Tuple[NDArrays, int]], updated_item_vectors: Tensor) -> NDArrays:
+    """Compute weighted average."""
+    # Calculate the total number of examples used during training
+    num_examples_total = sum([num_examples for _, num_examples in results])
+    total_interactions_per_item = updated_item_vectors.sum(0)
+    mlp_item_embeddings_weights = torch.Tensor()
+    weighted_weights = []
+    for (weights, num_examples), updated_item_vector in zip(results, updated_item_vectors):
+        # mlp_item_embeddings_weights = weights[0] * updated_item_vector.sum()
+        # Create a list of weights, each multiplied by the related number of examples
+        weighted_weights.append([layer * num_examples for layer in weights])
+    # Compute average weights of each layer
+    weights_prime = [
+        reduce(np.add, layer_updates) / num_examples_total
+        for layer_updates in zip(*weighted_weights)
+    ]
+
+    return weights_prime
 
 
 class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
@@ -24,10 +47,12 @@ class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
         if not results:
             return None, {}
 
-        updated_items_vectors = [list(r.metrics['updated_items']) for _, r in results]
+        updated_items_vectors = torch.tensor([list(r.metrics['updated_items']) for _, r in results])
+        self.server.get_parameters()
 
         # Call aggregate_fit from base class (FedAvg) to aggregate parameters and metrics
-        aggregated_parameters, aggregated_metrics = self.mf_aggregate_fit(server_round, results, failures, updated_items_vectors)
+        aggregated_parameters, aggregated_metrics = self.mf_aggregate_fit(server_round, results, failures,
+                                                                          updated_items_vectors)
 
         # Calculating aggregated loss
         examples = [r.num_examples for _, r in results]
@@ -45,11 +70,11 @@ class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
         return aggregated_parameters, {"loss": round_loss}
 
     def mf_aggregate_fit(
-        self,
-        server_round: int,
-        results: List[Tuple[ClientProxy, FitRes]],
-        failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
-        updated_item_vector: List,
+            self,
+            server_round: int,
+            results: List[Tuple[ClientProxy, FitRes]],
+            failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
+            updated_item_vectors: Tensor,
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         """Aggregate fit results using weighted average."""
         if not results:
@@ -63,7 +88,8 @@ class SaveFedAvgStrategy(fl.server.strategy.FedAvg):
             (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
             for _, fit_res in results
         ]
-        parameters_aggregated = ndarrays_to_parameters(aggregate(weights_results))
+        nd_aggregated = aggregate(weights_results, updated_item_vectors)
+        parameters_aggregated = ndarrays_to_parameters(nd_aggregated)
 
         # Aggregate custom metrics if aggregation fn was provided
         metrics_aggregated = {}

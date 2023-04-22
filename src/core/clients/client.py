@@ -51,8 +51,7 @@ class NCFClient(fl.client.NumPyClient):
         running_loss = 0.0
         updated_items = torch.zeros(int(config['ml_1m']['total_items']), dtype=torch.int)
         for epoch in range(epochs):
-            pbar = self.train_loader
-            for i, (x, y) in enumerate(pbar):
+            for i, (x, y) in enumerate(self.train_loader):
                 x, y = x.to(DEVICE), y.to(DEVICE)
                 self.optimizer.zero_grad()
                 loss = criterion(self.model(x), y)
@@ -70,7 +69,12 @@ class NCFClient(fl.client.NumPyClient):
 
     def get_parameters(self, config):
         # print(f"[Client {self.cid}] get_parameters")
-        return self.model.get_parameters()
+        params = self.model.get_parameters()
+        if 'updated_items' in config:
+            updated_items = np.array(list(config['updated_items']), dtype=np.int)[:, None]
+            # params[0] = np.multiply(updated_items, params[0])
+            # params[1] = np.multiply(updated_items, params[1])
+        return params
 
     def set_parameters(self, parameters: List[np.ndarray]):
         # print(f"[Client {self.cid}] set_parameters")
@@ -81,10 +85,10 @@ class NCFClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         loss, updated_items = self.train(epochs=config['local_epochs'],
                                          server_round=config['server_round'])
+        metrics = {'loss': loss, 'updated_items': bytes(updated_items)}
         self.save_client_state()
-        return self.get_parameters(config={}), self.num_examples["trainset"], {'loss': loss,
-                                                                               'updated_items': bytes(updated_items),
-                                                                               }
+        return self.get_parameters(config={'updated_items': bytes(updated_items)}), \
+               self.num_examples["trainset"], metrics
 
     def evaluate(self, parameters, config):
         # print(f"[Client {self.cid}] evaluate, config: {config}")
@@ -95,7 +99,7 @@ class NCFClient(fl.client.NumPyClient):
         return 0.0, self.num_examples["testset"], metrics
 
     def save_client_state(self):
-        # TODO: Reduce the checkpoint size
+        # TODO: Reduce the checkpoint size (Pickle, npz, npy)
         save_path = os.path.join("./checkpoints", "clients")
         if not os.path.exists(save_path):
             os.makedirs(save_path)
