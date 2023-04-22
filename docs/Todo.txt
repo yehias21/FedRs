@@ -1,4 +1,4 @@
-Problem in the project:
+##Problem in the project:
 - Sparcity of the dataset (Item might be not available in the dataset)
     - analysis of frequency of the items
     - clustering of the users in 500 cluster for example?
@@ -18,3 +18,6 @@ View these links:
 - https://github.com/JYWa/FedNova
 - https://github.com/iQua/flsim
 - https://github.com/balanced-fl/Addressing-Class-Imbalance-FL/tree/master/FEMNIST-4-Losses/models
+------------------------------------------------------------------------------------------------------------
+## Features
+- Cluster the items and users
