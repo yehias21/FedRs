@@ -2,11 +2,12 @@ import configparser
 import os
 import random
 import re
+from typing import List, Tuple
 
 import flwr as fl
 import numpy as np
 import torch
-from flwr.common import Parameters
+from flwr.common import Parameters, Metrics, NDArrays
 
 
 def seed_everything(seed):
@@ -47,3 +48,36 @@ def read_latest_params(checkpoints_path: str = "./checkpoints"):
 
     # No weights files found
     return None
+
+
+def weighted_loss(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    # Multiply loss of each client by number of items used
+    losses = [num_items * m["loss"] for num_items, m in metrics]
+    updated_items = [num_items for num_items, _ in metrics]
+    # Aggregate and return custom metric (weighted loss)
+    return {"Loss": sum(losses) / sum(updated_items)}
+
+
+def weighted_eval_metrics(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    # Multiply evaluation metrics of each client by number of updated_items used
+    updated_items = [num_items for num_items, _ in metrics]
+    ndcgs = [num_items * m["NDCG"] for num_items, m in metrics]
+    hrs = [num_items * m["HR"] for num_items, m in metrics]
+    # Aggregate and return custom metrics (weighted NDCG and HR)
+    return {"NDCG": sum(ndcgs) / sum(updated_items), "HR": sum(hrs) / sum(updated_items)}
+
+
+def aggregate_mf(results: List[Tuple[NDArrays, List[int]]]) -> NDArrays:
+    # TODO: handle the case where total_updated_items is zero
+    aggregated = np.zeros_like(results[0][0])
+    total_updated_items = np.array([up_items for _, up_items in results]).sum(axis=0).reshape(-1, 1)
+    # zero_indices = np.where(total_updated_items == 0)[0]
+    for i, (i_vectors, up_items) in enumerate(results):
+        aggregated += i_vectors * np.array(up_items).reshape(-1, 1)
+    # Avoid division by zero
+    # if len(zero_indices) > 0:
+    #     total_updated_items[zero_indices] = 1
+    #     # Set the aggregated values to the i_vectors value for the indices where total_updated_items is zero
+    #     aggregated[zero_indices] = results[0][0][zero_indices]
+    aggregated /= total_updated_items
+    return [i for i in aggregated]

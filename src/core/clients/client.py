@@ -65,16 +65,11 @@ class NCFClient(fl.client.NumPyClient):
                         self.writer.add_scalar("running_loss",
                                                running_loss / 100,
                                                (server_round - 1) * (epoch + 1) * n_total_steps + i)
-        return running_loss / epochs, updated_items.tolist()
+        return running_loss / epochs, updated_items
 
     def get_parameters(self, config):
         # print(f"[Client {self.cid}] get_parameters")
-        params = self.model.get_parameters()
-        if 'updated_items' in config:
-            updated_items = np.array(list(config['updated_items']), dtype=np.int)[:, None]
-            # params[0] = np.multiply(updated_items, params[0])
-            # params[1] = np.multiply(updated_items, params[1])
-        return params
+        return self.model.get_parameters()
 
     def set_parameters(self, parameters: List[np.ndarray]):
         # print(f"[Client {self.cid}] set_parameters")
@@ -85,10 +80,9 @@ class NCFClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         loss, updated_items = self.train(epochs=config['local_epochs'],
                                          server_round=config['server_round'])
-        metrics = {'loss': loss, 'updated_items': bytes(updated_items)}
+        metrics = {'loss': loss, 'updated_items': bytes(updated_items.tolist())}
         self.save_client_state()
-        return self.get_parameters(config={'updated_items': bytes(updated_items)}), \
-               self.num_examples["trainset"], metrics
+        return self.get_parameters(config={}), updated_items.sum().item(), metrics
 
     def evaluate(self, parameters, config):
         # print(f"[Client {self.cid}] evaluate, config: {config}")
