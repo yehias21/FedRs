@@ -62,8 +62,7 @@ class NCFClient(fl.client.NumPyClient):
                 # pbar.set_description(f"Round[{server_round}], Client[{self.cid}], Epoch [{epoch + 1}/{epochs}]")
                 if (i + 1) % 100 == 0:
                     if self.log:
-                        self.writer.add_scalar("running_loss",
-                                               running_loss / 100,
+                        self.writer.add_scalar("running_loss", running_loss / 100,
                                                (server_round - 1) * (epoch + 1) * n_total_steps + i)
         return running_loss / epochs, updated_items
 
@@ -119,10 +118,9 @@ class NCFClient(fl.client.NumPyClient):
 
 def client_fn(cid) -> NCFClient:
     net = NeuMF(config).to(DEVICE)
-    loader = NCFloader(config, int(cid) + 1)
+    loader = NCFloader(config, int(cid))
     train_loader, test_loader = loader.get_train_instance(), loader.get_test_instance()
-    num_examples = {"trainset": len(train_loader) * (int(config['dataloader']['neg_samples']) + 1),
-                    "testset": 100}
+    num_examples = {"testset": 100}
     return NCFClient(cid=int(cid), model=net, train_loader=train_loader, test_loader=test_loader,
                      num_examples=num_examples, device=DEVICE)
 
