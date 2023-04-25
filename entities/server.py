@@ -36,6 +36,7 @@ class SecretShareRequestHandler(socketserver.BaseRequestHandler):
     U_1_num = 0
     ciphertexts_map = {}         # {u:{v1: ciphertexts, v2: ciphertexts}}
     U_2 = []
+    tags_map = {}
 
     def handle(self) -> None:
         # receive data from the client
@@ -49,6 +50,10 @@ class SecretShareRequestHandler(socketserver.BaseRequestHandler):
             if key not in self.ciphertexts_map:
                 self.ciphertexts_map[key] = {}
             self.ciphertexts_map[key][id] = value
+        # for key, value in msg[2].items():
+        #     if key not in self.tags_map:
+        #         self.tags_map[key] = {}
+        #     self.tags_map[key][id] = value
 
         self.U_2.append(id)
 

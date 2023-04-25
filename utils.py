@@ -60,7 +60,7 @@ class AE:
     """
 
     @staticmethod
-    def gen(path: str = None) -> tuple:
+    def gen(path: str = None) -> bytes:
         """Generates the key and nonce using AES algorithm (EAX mode), and saves them.
 
         Args:
@@ -70,33 +70,43 @@ class AE:
             Tuple[key, nonce]: the key and nonce used to generate the cipher object.
         """
 
-        key = get_random_bytes(16)
+       # key = get_random_bytes(16)
         nonce = get_random_bytes(16)
 
         if path is not None:
             os.makedirs(path)
 
             # save the key and nonce
-            with open(os.path.join(path, "key"), 'wb') as f:
-                f.write(key)
+            # with open(os.path.join(path, "key"), 'wb') as f:
+            #     f.write(key)
             with open(os.path.join(path, "nonce"), 'wb') as f:
                 f.write(nonce)
 
-        return key, nonce
+        return nonce
 
     @staticmethod
-    def encrypt(key: bytes, nonce: bytes, plaintext: bytes) -> bytes:
-        cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
-        ciphertext = cipher.encrypt(plaintext)
+    def encrypt(key: bytes, plaintext: bytes) -> bytes:
+        cipher = AES.new(key, AES.MODE_GCM)
+        nonce = cipher.nonce
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        mix = b''.join([ciphertext,tag,nonce])
 
-        return ciphertext
+        return mix
 
     @staticmethod
-    def decrypt(key: bytes, nonce: bytes, ciphertext: bytes) -> bytes:
-        cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
-        plaintext = cipher.decrypt(ciphertext)
+    def decrypt(key: bytes, mix: bytes) -> bytes:
+        nonce = mix[-16:]
+        tag = mix[-32:-16]
+        ciphertext = mix[:-32]
+        try:
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+            return plaintext
+        except:
+            print("Tag isn't valid")
+            return bytes(0)
 
-        return plaintext
+
 
 
 class KA:

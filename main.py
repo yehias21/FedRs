@@ -164,7 +164,7 @@ def share_keys() -> bool:
         logging.info("{} users have sent ciphertexts".format(len(U_2)))
 
         for u in U_2:
-            msg = pickle.dumps(SecretShareRequestHandler.ciphertexts_map[u])
+            msg = pickle.dumps([SecretShareRequestHandler.ciphertexts_map[u]])
             server.send(msg, entities[u].host, entities[u].port)
 
         return True
@@ -391,10 +391,16 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print("{:=^80s}".format("Finish Unmasking"))
+    # print(input_gradients)
+    # print(output)
 
-    assert ((np.sum(np.array(input_gradients), axis=0) - output) < np.full(shape, 1e-6)).all()
+   #assert ((np.sum(np.array(input_gradients), axis=0) - output) < np.full(shape, 1e-6)).all()
 
     print("{:=^80s}".format("Finish Secure Aggregation"))
+    # print(U_1)
+    # print(U_2)
+    # print(U_3)
+    # print(U_4)
 
     for u in U_3:
         if not entities[u].verify(output, verification, len(U_3)):

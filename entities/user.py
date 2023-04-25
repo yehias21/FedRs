@@ -30,7 +30,8 @@ class User:
 
         self.__random_seed = None
 
-        self.ciphertexts = None
+        self.ciphertexts = {}
+        self.tags = {}
 
         self.U_3 = None
 
@@ -119,7 +120,7 @@ class User:
         random_seed_shares = SS.share(self.__random_seed, t, n)
 
         all_ciphertexts = {}       # {id: ciphertext}
-
+        all_tags = {}
         for i, v in enumerate(U_1):
             if v == self.id:
                 continue
@@ -127,13 +128,18 @@ class User:
             info = pickle.dumps([self.id, v, s_sk_shares[i], random_seed_shares[i]])
 
             v_c_pk = self.ka_pub_keys_map[v]["c_pk"]
+
             shared_key = KA.agree(self.__c_sk, v_c_pk)
 
-            ciphertext = AE.encrypt(shared_key, shared_key, info)
+            # nonce=AE.gen(r"C:\Users\lenovo\PycharmProjects\SecureAggregation\nonce.txt")
 
-            all_ciphertexts[v] = ciphertext
+            mix = AE.encrypt(shared_key, info)
+
+            all_ciphertexts[v] = mix
+            all_tags[v] = mix
 
         msg = pickle.dumps([self.id, all_ciphertexts])
+        print(msg)
 
         # send all shares of the s_sk and random seed to the server
         self.send(msg, host, port)
@@ -151,7 +157,15 @@ class User:
         conn, _ = sock.accept()
 
         data = SocketUtil.recv_msg(conn)
-        self.ciphertexts = pickle.loads(data)
+        msg= pickle.loads(data)
+        # print("yalahwy : ", msg)
+        # print ("data:", msg[1])
+        for key, value in msg[0].items():
+            self.ciphertexts[key]= value
+        #self.ciphertexts = pickle.loads(data[0])
+        # print("ostor ya rab: ", self.ciphertexts)
+        # for key, value in msg[2].items():
+        #     self.tags[key]= value
 
         logging.info("received ciphertext from the server")
 
@@ -214,7 +228,7 @@ class User:
         verification_gradients = verification_code + priv_mask_vec_1 + np.sum(np.array(random_vec_1_list), axis=0)
 
         msg = pickle.dumps([self.id, masked_gradients, verification_gradients])
-
+        print(msg)
         # send the masked gradients to the server
         self.send(msg, host, port)
 
@@ -229,12 +243,11 @@ class User:
 
         data = SocketUtil.recv_msg(conn)
         self.U_3 = pickle.loads(data)
-
+      #  print(self.U_3)
         logging.info("received U_3 from the server")
 
         signature = SIG.sign(data, self.__priv_key)
         msg = pickle.dumps([self.id, signature])
-
         self.send(msg, host, port)
 
         conn, _ = sock.accept()
@@ -272,8 +285,8 @@ class User:
             v_c_pk = self.ka_pub_keys_map[v]["c_pk"]
             shared_key = KA.agree(self.__c_sk, v_c_pk)
 
-            info = pickle.loads(AE.decrypt(shared_key, shared_key, self.ciphertexts[v]))
-
+            info = pickle.loads(AE.decrypt(shared_key, self.ciphertexts[v]))
+            #print(self.U_3)
             if v not in self.U_3:
                 # send the shares of s_sk to the server
                 priv_key_shares_map[v] = info[2]
@@ -287,5 +300,8 @@ class User:
 
     def verify(self, output_gradients, verification_gradients, num_U_3):
         gradients_prime = self.__a * output_gradients + num_U_3 * self.__b
+        print("V=", verification_gradients)
+        print("G=", output_gradients)
+        print("P=", gradients_prime)
 
         return ((gradients_prime - verification_gradients) < np.full(output_gradients.shape, 1e-6)).all()
