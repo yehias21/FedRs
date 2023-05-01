@@ -21,7 +21,7 @@ def load_datasets(num_clients: int):
         partition_classes = set(np.random.choice(classes, size=np.random.randint(1, len(classes)), replace=False))
         partition_class_indices = [trainset.class_to_idx[c] for c in partition_classes]
         indices = np.where(np.isin(trainset.targets, partition_class_indices))[0]
-        print("Client {}: {} samples, classes: {}".format(i, len(indices), partition_classes))
+        # print("Client {}: {} samples, classes: {}".format(i, len(indices), partition_classes))
 
         # if len(indices) == 0:
         #     continue  # Skip this partition if it has no samples

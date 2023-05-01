@@ -28,7 +28,7 @@ class Net(nn.Module):
 
     def get_parameters(self):
         params = []
-        print(self.state_dict().items())
+        # print(self.state_dict().items())
         for _, val in self.state_dict().items():
             params.append(val.cpu().numpy())
         return params

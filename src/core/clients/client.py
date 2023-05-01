@@ -5,6 +5,7 @@ from typing import List
 import flwr as fl
 import numpy as np
 import torch
+from flwr.client import SecAggClient
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
@@ -14,7 +15,7 @@ from src.core.model.testing_model import Net
 from src.utils.utils import get_config
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-config = get_config()
+cfg = get_config()
 
 
 class NCFClient(fl.client.NumPyClient):
@@ -39,7 +40,7 @@ class NCFClient(fl.client.NumPyClient):
         self.batch_size = 32
         self.num_examples = num_examples
         self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                          lr=float(config["Client"]["learning_rate"]))
+                                          lr=float(cfg["Client"]["learning_rate"]))
 
     def train(self, epochs, server_round):
         """Train the model on the training set."""
@@ -120,12 +121,10 @@ if __name__ == '__main__':
     net = Net().to(DEVICE)
     trainloader, testloader, num_examples = load_data()
 
+    client = NCFClient(cid=args.cid, model=net, trainloader=trainloader,
+                       testloader=testloader,
+                       num_examples=num_examples,
+                       log=args.log
+                       )
     fl.client.start_numpy_client(server_address="localhost:8080",
-                                 client=NCFClient(cid=args.cid,
-                                                  model=net,
-                                                  trainloader=trainloader,
-                                                  testloader=testloader,
-                                                  num_examples=num_examples,
-                                                  log=args.log
-                                                  )
-                                 )
+                                 client=SecAggClient(client))

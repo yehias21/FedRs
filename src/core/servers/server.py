@@ -4,9 +4,9 @@ from typing import List, Tuple, Union, Dict, Optional
 import flwr as fl
 import numpy as np
 import torch
-from flwr.common import Metrics, FitRes, Scalar, Parameters, EvaluateRes
+from flwr.common import FitRes, Scalar, Parameters, EvaluateRes
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import Strategy
+from flwr.server.strategy import SecAggFedAvg
 from torch.utils.tensorboard import SummaryWriter
 
 from src.core.clients.client import NCFClient
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     if DEVICE.type == "cuda":
         client_resources = {"num_gpus": 1}
     # Define strategy
-    strategy = SaveFedAvgStrategy(
+    strategy = SecAggFedAvg(
         on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
                                              "local_epochs": int(config["Client"]['num_epochs'])
                                              },
@@ -91,20 +91,30 @@ if __name__ == '__main__':
         fraction_evaluate=float(config["Server"]["fraction_evaluate"]),
         initial_parameters=utils.read_latest_params(),
     )
-    # # Start Flower server
-    # fl.server.start_server(
-    #     server_address="localhost:8080",
-    #     config=fl.server.ServerConfig(num_rounds=3),
-    #     strategy=strategy,
+    # strategy = SaveFedAvgStrategy(
+    #     on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
+    #                                          "local_epochs": int(config["Client"]['num_epochs'])
+    #                                          },
+    #     on_evaluate_config_fn=lambda curr_round: {"server_round": curr_round},
+    #     fraction_fit=float(config["Server"]["fraction_fit"]),
+    #     fraction_evaluate=float(config["Server"]["fraction_evaluate"]),
+    #     initial_parameters=utils.read_latest_params(),
     # )
+
+    # Start Flower server
+    fl.server.start_server(
+        server_address="localhost:8080",
+        config=fl.server.ServerConfig(num_rounds=3),
+        strategy=strategy,
+    )
 
     # Create datasets
     trainloaders, valloaders, testloader = load_datasets(int(config["Common"]["num_clients"]))
 
-    history = fl.simulation.start_simulation(
-        client_fn=client_fn,
-        num_clients=int(config["Common"]["num_clients"]),
-        strategy=strategy,
-        config=fl.server.ServerConfig(num_rounds=int(config["Server"]["num_rounds"])),
-        client_resources=client_resources,
-    )
+    # history = fl.simulation.start_simulation(
+    #     client_fn=client_fn,
+    #     num_clients=int(config["Common"]["num_clients"]),
+    #     strategy=strategy,
+    #     config=fl.server.ServerConfig(num_rounds=int(config["Server"]["num_rounds"])),
+    #     client_resources=client_resources,
+    # )
