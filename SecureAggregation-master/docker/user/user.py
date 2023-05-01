@@ -4,6 +4,7 @@ import random
 import socket
 import logging
 import numpy as np
+import os
 
 from utils import *
 
@@ -26,7 +27,7 @@ class User:
 
         self.__random_seed = None
 
-        self.ciphertexts = None 
+        self.ciphertexts = {}
         self.tags = None
 
         self.U_3 = None
@@ -133,7 +134,9 @@ class User:
         """
 
         # generates a random integer from 0 to 2**32 - 1 (to be used as a seed for PRG)
-        self.__random_seed = random.randint(0, 2**32 - 1)
+        # self.__random_seed = random.randint(0, 2**32 - 1)
+
+        self.__random_seed = os.urandom(4)
 
         n = len(U_1)
 
@@ -180,6 +183,8 @@ class User:
 
         data = SocketUtil.recv_msg(conn)
         msg = pickle.loads(data)
+        # logging.info(self.ciphertexts)
+
         for key, value in msg[0].items():
             self.ciphertexts[key]= value
         # self.ciphertexts = pickle.loads(bytes(data[0]))
@@ -203,8 +208,8 @@ class User:
         # generate user's own private mask vector p_u
         priv_mask_vec = []
         for g in gradients:
-            rs = np.random.RandomState(self.__random_seed)
-            priv_mask_vec.append(rs.random(g.shape))
+            rs = np.random.RandomState(self.__random_seed) #RNG
+            priv_mask_vec.append(rs.random(g.shape)) 
 
         # generate random vectors p_u_v for each user
         random_vec_list = []

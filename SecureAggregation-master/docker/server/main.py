@@ -74,7 +74,8 @@ def share_keys(server, U_1, t, wait_time):
 
         for u in U_2:
             msg = pickle.dumps([SecretShareRequestHandler.ciphertexts_map[u]])
-            logging.info(len(msg))
+            # logging.info(msg)
+
             server.send(msg, "user" + u, 10001)
     else:
         # the number of the received messages is less than the threshold value for SecretSharing, abort

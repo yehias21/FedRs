@@ -3,6 +3,7 @@ import rsa
 import pickle
 import struct
 import multiprocessing
+import logging 
 
 from Cryptodome.Cipher import AES
 from Cryptodome.Hash import SHA256
@@ -109,9 +110,17 @@ class AE:
             return plaintext
 
         except:
-            print("Tag is not valid")
+            logging.info("tag not valid")
             return bytes(0)
-
+    @staticmethod
+    def PRG(key , nonce):
+        # create an AES-CTR cipher object with the random key and nonce
+        cipher = AES.new(key, AES.MODE_CTR, nonce=nonce)
+        
+        # generate a stream of pseudo-random bytes using the AES-CTR cipher
+        prn = cipher.encrypt(b'0123456789ABCDEF')
+        return prn
+        
 
 
 class KA:

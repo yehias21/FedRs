@@ -45,6 +45,7 @@ class SecretShareRequestHandler(socketserver.BaseRequestHandler):
 
         msg = pickle.loads(data)
         id = msg[0]
+        logging.info(msg)
 
         # retrieve each user's ciphertexts
         for key, value in msg[1].items():
