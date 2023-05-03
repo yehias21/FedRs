@@ -116,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('--cid', type=int, required=True)
     parser.add_argument('--log', type=bool, required=False, default=False)
     args = parser.parse_args()
-
+    # NOTE: Change the model and data loader
     # Load model and data
     net = Net().to(DEVICE)
     trainloader, testloader, num_examples = load_data()
