@@ -126,5 +126,5 @@ if __name__ == '__main__':
                        num_examples=num_examples,
                        log=args.log
                        )
-    fl.client.start_numpy_client(server_address="localhost:8080",
+    fl.client.start_numpy_client(server_address="localhost:9017",
                                  client=SecAggClient(client))

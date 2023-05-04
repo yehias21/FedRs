@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # Start Flower server
     # FIXME: send the SecServer in .start_server
     fl.server.start_server(
-        server_address="localhost:8080",
+        server_address="localhost:9017",
         config=fl.server.ServerConfig(num_rounds=3),
         strategy=strategy,
     )
