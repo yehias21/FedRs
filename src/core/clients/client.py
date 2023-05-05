@@ -3,12 +3,15 @@ import os.path
 from datetime import datetime
 from typing import List
 
+from tqdm import tqdm
+
 import flwr as fl
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
+from flwr.client import SecAggClient
 from src.core.model.model import NeuMF
 from src.utils.evaluate import calc_metrics
 from src.utils.mldataset import NCFloader
@@ -48,23 +51,25 @@ class NCFClient(fl.client.NumPyClient):
         """Train the model on the training set."""
         criterion = torch.nn.CrossEntropyLoss()
         n_total_steps = len(self.train_loader)
-        running_loss = 0.0
         updated_items = torch.zeros(int(config['ml_1m']['total_items']), dtype=torch.int)
+        running_loss = 0
         for epoch in range(epochs):
-            for i, (x, y) in enumerate(self.train_loader):
+            pbar = tqdm(enumerate(self.train_loader))
+            for i, (x, y) in pbar:
                 x, y = x.to(DEVICE), y.to(DEVICE)
                 self.optimizer.zero_grad()
                 loss = criterion(self.model(x), y)
                 loss.backward()
                 self.optimizer.step()
-                running_loss += loss.item()
+                running_loss = loss.item()
                 updated_items.scatter_(0, x.to(torch.int64), 1)
-                # pbar.set_description(f"Round[{server_round}], Client[{self.cid}], Epoch [{epoch + 1}/{epochs}]")
+                pbar.set_description(f"Round[{server_round}], Client[{self.cid}], Epoch [{epoch + 1}/{epochs}]")
+                pbar.update(1)
                 if (i + 1) % 100 == 0:
                     if self.log:
                         self.writer.add_scalar("running_loss", running_loss / 100,
                                                (server_round - 1) * (epoch + 1) * n_total_steps + i)
-        return running_loss / epochs, updated_items
+        return running_loss, updated_items
 
     def get_parameters(self, config):
         # print(f"[Client {self.cid}] get_parameters")
@@ -130,4 +135,4 @@ if __name__ == '__main__':
     parser.add_argument('--cid', type=int, required=True)
     parser.add_argument('--log', type=bool, required=False, default=False)
     args = parser.parse_args()
-    fl.client.start_numpy_client(server_address="localhost:8080", client=client_fn(args.cid))
+    fl.client.start_numpy_client(server_address="localhost:8080", client=SecAggClient(client_fn(args.cid)))

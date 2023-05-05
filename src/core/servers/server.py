@@ -5,6 +5,7 @@ import torch
 
 from src.core.clients.client import client_fn
 from src.core.servers.serverFedWAvg import MF_FedAvgStrategy
+from src.core.servers.serverFedMFSecagg import MF_SecAggStrategy
 from src.utils import utils
 
 config = utils.get_config()
@@ -18,7 +19,19 @@ if __name__ == '__main__':
 
     DEVICE = torch.device("cpu")
     # Define strategy
-    strategy = MF_FedAvgStrategy(
+    # strategy = MF_FedAvgStrategy(
+    #     min_available_clients=int(config["Common"]["min_available_clients"]),
+    #     on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
+    #                                          "local_epochs": int(config["Client"]['num_epochs'])
+    #                                          },
+    #     on_evaluate_config_fn=lambda curr_round: {"server_round": curr_round},
+    #     fit_metrics_aggregation_fn=utils.weighted_loss,
+    #     evaluate_metrics_aggregation_fn=utils.weighted_eval_metrics,
+    #     # TODO: Checkpointing on item embeddings and model parameters
+    #     initial_parameters=None,
+    # )
+
+    strategy = MF_SecAggStrategy(
         min_available_clients=int(config["Common"]["min_available_clients"]),
         on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
                                              "local_epochs": int(config["Client"]['num_epochs'])
