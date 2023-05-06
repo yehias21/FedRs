@@ -19,19 +19,7 @@ if __name__ == '__main__':
 
     DEVICE = torch.device("cpu")
     # Define strategy
-    # strategy = MF_FedAvgStrategy(
-    #     min_available_clients=int(config["Common"]["min_available_clients"]),
-    #     on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
-    #                                          "local_epochs": int(config["Client"]['num_epochs'])
-    #                                          },
-    #     on_evaluate_config_fn=lambda curr_round: {"server_round": curr_round},
-    #     fit_metrics_aggregation_fn=utils.weighted_loss,
-    #     evaluate_metrics_aggregation_fn=utils.weighted_eval_metrics,
-    #     # TODO: Checkpointing on item embeddings and model parameters
-    #     initial_parameters=None,
-    # )
-
-    strategy = MF_SecAggStrategy(
+    strategy = MF_FedAvgStrategy(
         min_available_clients=int(config["Common"]["min_available_clients"]),
         on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
                                              "local_epochs": int(config["Client"]['num_epochs'])
@@ -42,6 +30,18 @@ if __name__ == '__main__':
         # TODO: Checkpointing on item embeddings and model parameters
         initial_parameters=None,
     )
+
+    # strategy = MF_SecAggStrategy(
+    #     fraction_fit=1,
+    #     min_available_clients=int(config["Common"]["min_available_clients"]),
+    #     on_fit_config_fn=lambda curr_round: {"server_round": curr_round,
+    #                                          "local_epochs": int(config["Client"]['num_epochs'])},
+    #     on_evaluate_config_fn=lambda curr_round: {"server_round": curr_round},
+    #     fit_metrics_aggregation_fn=utils.weighted_loss,
+    #     evaluate_metrics_aggregation_fn=utils.weighted_eval_metrics,
+    #     # TODO: Checkpointing on item embeddings and model parameters
+    #     initial_parameters=None,
+    # )
 
     # Start Flower server
     if args.sim:
