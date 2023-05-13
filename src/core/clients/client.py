@@ -3,15 +3,14 @@ import os.path
 from datetime import datetime
 from typing import List
 
-from tqdm import tqdm
-
 import flwr as fl
 import numpy as np
 import torch
+from flwr.client import SecAggClient
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
-from flwr.client import SecAggClient
 from src.core.model.model import NeuMF
 from src.utils.evaluate import calc_metrics
 from src.utils.mldataset import NCFloader
@@ -38,13 +37,12 @@ class NCFClient(fl.client.NumPyClient):
         self.log = log
         if self.log:
             self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Client{self.cid}")
-        self.model = model
+        self.model: NeuMF = model
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.batch_size = 32
         self.num_examples = num_examples
-        self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                          lr=float(config["Client"]["learning_rate"]))
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=float(config["Client"]["learning_rate"]))
         self.load_client_state()
 
     def train(self, epochs, server_round):
