@@ -7,15 +7,8 @@ from flwr.common import (
     NDArrays,
 )
 from flwr.server.strategy.secagg import SecAggStrategy
-from torch.utils.tensorboard import SummaryWriter
 
 from src.core.servers.serverFedWAvg import MF_FedAvgStrategy
-from src.utils import utils
-
-config = utils.get_config()
-SERVER_WRITER = SummaryWriter(comment=f'_C{config["Common"]["num_clients"]}_'
-                                      f'LE{config["Client"]["num_epochs"]}_'
-                                      f'LR{config["Client"]["learning_rate"]}')
 
 
 class MF_SecAggStrategy(MF_FedAvgStrategy, SecAggStrategy):

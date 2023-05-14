@@ -7,7 +7,7 @@ from typing import List, Tuple
 import flwr as fl
 import numpy as np
 import torch
-from flwr.common import Parameters, Metrics, NDArrays
+from flwr.common import Metrics, NDArrays
 
 
 def seed_everything(seed):
@@ -81,3 +81,6 @@ def aggregate_mf(results: List[Tuple[NDArrays, List[int]]]) -> NDArrays:
     #     aggregated[zero_indices] = results[0][0][zero_indices]
     aggregated /= total_updated_items
     return [i for i in aggregated]
+
+
+config = get_config()
