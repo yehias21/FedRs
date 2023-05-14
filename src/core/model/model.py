@@ -54,13 +54,13 @@ class NeuMF(nn.Module):
 
     def forward(self, item_indices):
         # FIXME: off-by-one error in item indices in the data loader [Issue #9]
-        # item_indices -= 1
         try:
+            # item_indices -= 1
             item_embedding_mlp = self.embedding_item_mlp(item_indices)
             item_embedding_mf = self.embedding_item_mf(item_indices)
             user_idx = torch.tensor([0] * item_indices.shape[0], dtype=torch.int)
-            mlp_vector = torch.cat([self.embedding_user_mlp(user_idx), item_embedding_mlp],
-                                   dim=-1)  # the concat latent vector
+            # the concat latent vector
+            mlp_vector = torch.cat([self.embedding_user_mlp(user_idx), item_embedding_mlp], dim=-1)
             mf_vector = torch.mul(self.embedding_user_mf(user_idx), item_embedding_mf)
             for idx, _ in enumerate(range(len(self.fc_layers))):
                 mlp_vector = self.fc_layers[idx](mlp_vector)
@@ -68,9 +68,11 @@ class NeuMF(nn.Module):
             logits = self.affine_output(vector)
             rating = self.logistic(logits)
             return rating.squeeze()
-        except Exception:
-            print("EXCEPTION !!!!")
-            raise Exception
+        except Exception as e:
+            print(e)
+            items = item_indices.numpy()
+            print(item_indices.shape)
+            raise e
 
     def get_parameters(self):
         params = []

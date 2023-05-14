@@ -1,6 +1,8 @@
 from flwr.server import History
 from torch.utils.tensorboard import SummaryWriter
 
+from src.utils.utils import config
+
 
 def plot_metric_from_history(
         hist: History,
@@ -21,3 +23,16 @@ def plot_metric_from_history(
         for metric in hist.metrics_distributed:
             for r, value in hist.metrics_distributed[metric]:
                 tensorboard_writer.add_scalar(f'{metric}/Test', value, r)
+
+
+class ServerWriter:
+    _instance = SummaryWriter(comment=f'_Server_'
+                                      f'C{config["Common"]["num_clients"]}_'
+                                      f'LE{config["Client"]["num_epochs"]}_'
+                                      f'LR{config["Client"]["learning_rate"]}'
+                              )
+
+    def __new__(cls, *args, **kwargs) -> SummaryWriter:
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance

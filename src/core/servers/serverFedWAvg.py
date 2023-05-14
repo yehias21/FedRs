@@ -5,20 +5,16 @@ import flwr as fl
 from flwr.common import FitRes, Scalar, Parameters, EvaluateRes, parameters_to_ndarrays, ndarrays_to_parameters
 from flwr.common.logger import log
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import Strategy
+from flwr.server.strategy import FedAvg
 from flwr.server.strategy.aggregate import aggregate
-from torch.utils.tensorboard import SummaryWriter
 
-from src.utils import utils
-from src.utils.utils import aggregate_mf
+import src.utils.utils
+from src.utils.vizualization import ServerWriter
 
-config = utils.get_config()
-SERVER_WRITER = SummaryWriter(comment=f'_C{config["Common"]["num_clients"]}_'
-                                      f'LE{config["Client"]["num_epochs"]}_'
-                                      f'LR{config["Client"]["learning_rate"]}')
+server_writer = ServerWriter()
 
 
-class MF_FedAvgStrategy(fl.server.strategy.FedAvg):
+class MF_FedAvgStrategy(FedAvg):
     def aggregate_fit(
             self,
             server_round: int,
@@ -32,7 +28,7 @@ class MF_FedAvgStrategy(fl.server.strategy.FedAvg):
 
         aggregated_parameters, aggregated_metrics = self.mf_aggregate_fit(server_round, results, failures)
         for metric in aggregated_metrics:
-            SERVER_WRITER.add_scalar(f'{metric}/Train', aggregated_metrics[metric], server_round)
+            server_writer.add_scalar(f'{metric}/Train', aggregated_metrics[metric], server_round)
 
         # # Saving the Parameters
         # if results and server_round % 10 == 0:
@@ -65,7 +61,7 @@ class MF_FedAvgStrategy(fl.server.strategy.FedAvg):
             updated_items_results.append((i_vectors, list(r.metrics['updated_items'])))
             nn_weights_results.append((nn_weights, r.num_examples))
 
-        i_aggregated = aggregate_mf(updated_items_results)
+        i_aggregated = src.utils.utils.aggregate_mf(updated_items_results)
         nn_aggregated = aggregate(nn_weights_results)
         parameters_aggregated = ndarrays_to_parameters(i_aggregated + nn_aggregated)
 
@@ -93,7 +89,7 @@ class MF_FedAvgStrategy(fl.server.strategy.FedAvg):
         # Call aggregate_evaluate from base class (FedAvg) to aggregate loss and metrics
         aggregated_loss, aggregated_metrics = super().aggregate_evaluate(server_round, results, failures)
         for metric in aggregated_metrics:
-            SERVER_WRITER.add_scalar(f'Evaluation/{metric}', aggregated_metrics[metric], server_round)
+            server_writer.add_scalar(f'Evaluation/{metric}', aggregated_metrics[metric], server_round)
 
         # Return aggregated metrics.
         return aggregated_loss, aggregated_metrics

@@ -3,15 +3,13 @@ import os.path
 from datetime import datetime
 from typing import List
 
-from tqdm import tqdm
-
 import flwr as fl
 import numpy as np
 import torch
+from flwr.client import SecAggClient
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from flwr.client import SecAggClient
 from src.core.model.model import NeuMF
 from src.utils.evaluate import calc_metrics
 from src.utils.mldataset import NCFloader
@@ -38,24 +36,24 @@ class NCFClient(fl.client.NumPyClient):
         self.log = log
         if self.log:
             self.writer = SummaryWriter(log_dir=f"runs/{datetime.now():%Y%m%d_%H%M}/Client{self.cid}")
-        self.model = model
+        self.model: NeuMF = model
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.batch_size = 32
         self.num_examples = num_examples
-        self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                          lr=float(config["Client"]["learning_rate"]))
-        self.load_client_state()
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=float(config["Client"]["learning_rate"]))
+        self._load_client_state()
 
     def train(self, epochs, server_round):
+        print(f"Client {self.cid}, round {server_round}: Training..")
         """Train the model on the training set."""
         criterion = torch.nn.CrossEntropyLoss()
         n_total_steps = len(self.train_loader)
         updated_items = torch.zeros(int(config['ml_1m']['total_items']), dtype=torch.int)
         running_loss = 0
         for epoch in range(epochs):
-            pbar = tqdm(enumerate(self.train_loader))
-            for i, (x, y) in pbar:
+            # pbar = tqdm(enumerate(self.train_loader))
+            for i, (x, y) in enumerate(self.train_loader):
                 x, y = x.to(DEVICE), y.to(DEVICE)
                 self.optimizer.zero_grad()
                 loss = criterion(self.model(x), y)
@@ -63,8 +61,8 @@ class NCFClient(fl.client.NumPyClient):
                 self.optimizer.step()
                 running_loss = loss.item()
                 updated_items.scatter_(0, x.to(torch.int64), 1)
-                pbar.set_description(f"Round[{server_round}], Client[{self.cid}], Epoch [{epoch + 1}/{epochs}]")
-                pbar.update(1)
+                # pbar.set_description(f"Round[{server_round}], Client[{self.cid}], Epoch [{epoch + 1}/{epochs}]")
+                # pbar.update(1)
                 if (i + 1) % 100 == 0:
                     if self.log:
                         self.writer.add_scalar("running_loss", running_loss / 100,
@@ -85,7 +83,7 @@ class NCFClient(fl.client.NumPyClient):
         loss, updated_items = self.train(epochs=config['local_epochs'],
                                          server_round=config['server_round'])
         metrics = {'loss': loss, 'updated_items': bytes(updated_items.tolist())}
-        self.save_client_state()
+        self._save_client_state()
         return self.get_parameters(config={}), updated_items.sum().item(), metrics
 
     def evaluate(self, parameters, config):
@@ -96,7 +94,7 @@ class NCFClient(fl.client.NumPyClient):
                                device=self.device)
         return 0.0, self.num_examples["testset"], metrics
 
-    def save_client_state(self):
+    def _save_client_state(self):
         # TODO: Reduce the checkpoint size (Pickle, npz, npy)
         save_path = os.path.join("./checkpoints", "clients")
         if not os.path.exists(save_path):
@@ -110,7 +108,7 @@ class NCFClient(fl.client.NumPyClient):
             f=os.path.join(save_path, f"{self.cid}.pt"),
         )
 
-    def load_client_state(self):
+    def _load_client_state(self):
         checkpoint_path = os.path.join("./checkpoints", "clients", f"{self.cid}.pth")
         if os.path.exists(checkpoint_path):
             checkpoint = torch.load(checkpoint_path)
