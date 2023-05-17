@@ -4,7 +4,7 @@
 export PYTHONPATH=.
 
 ## Start the clients
-for i in {1..10}
+for i in {1..20}
 do
     python src/core/clients/client.py --cid "$i" &
 done
