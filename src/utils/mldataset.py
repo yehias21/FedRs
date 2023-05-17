@@ -34,13 +34,13 @@ class NCFloader:
         path = os.path.join(args['dataloader']['federated_path'], f"user_{client_id}.csv")
         data = pd.read_csv(path)
         self.positive = data['items']
-        self.neg = set(i for i in range(int(args['ml_1m']['total_items']))) - set(self.positive)
+        self.neg = set(i for i in range(1, int(args['ml_1m']['total_items']) + 1)) - set(self.positive)
         test_idx = data['timestamp'].idxmax()
         self.test = data.iloc[test_idx]
         self.positive.drop(test_idx, inplace=True)
         self.args = args
 
-    def get_train_instance(self, batch_size=5, workers=1):
+    def get_train_instance(self, batch_size=8, workers=1):
         train_data = train(self.positive, self.neg, int(self.args['dataloader']['neg_samples']) + 1)
         return DataLoader(train_data,
                           batch_size=batch_size * (int(self.args['dataloader']['neg_samples']) + 1),

@@ -109,7 +109,7 @@ class NCFClient(fl.client.NumPyClient):
         )
 
     def _load_client_state(self):
-        checkpoint_path = os.path.join("./checkpoints", "clients", f"{self.cid}.pth")
+        checkpoint_path = os.path.join("./checkpoints", "clients", f"{self.cid}.pt")
         if os.path.exists(checkpoint_path):
             checkpoint = torch.load(checkpoint_path)
             self.optimizer.load_state_dict(checkpoint['optimizer'])
@@ -124,8 +124,12 @@ def client_fn(cid) -> NCFClient:
     loader = NCFloader(config, int(cid))
     train_loader, test_loader = loader.get_train_instance(), loader.get_test_instance()
     num_examples = {"testset": 100}
-    return NCFClient(cid=int(cid), model=net, train_loader=train_loader, test_loader=test_loader,
-                     num_examples=num_examples, device=DEVICE)
+    return NCFClient(cid=int(cid),
+                     model=net,
+                     train_loader=train_loader,
+                     test_loader=test_loader,
+                     num_examples=num_examples,
+                     device=DEVICE)
 
 
 if __name__ == '__main__':
