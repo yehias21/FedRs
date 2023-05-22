@@ -34,7 +34,7 @@ class Net(nn.Module):
         return params
 
     def set_parameters(self, parameters: List[np.ndarray]):
-        print(parameters)
+        # print(parameters)
         params_dict = zip(self.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.load_state_dict(state_dict, strict=True)
