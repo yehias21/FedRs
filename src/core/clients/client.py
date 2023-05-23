@@ -137,4 +137,5 @@ if __name__ == '__main__':
     parser.add_argument('--cid', type=int, required=True)
     parser.add_argument('--log', type=bool, required=False, default=False)
     args = parser.parse_args()
-    fl.client.start_numpy_client(server_address="localhost:8080", client=SecAggClient(client_fn(args.cid)))
+    fl.client.start_numpy_client(server_address="localhost:8080",
+                                 client=SecAggClient(client_fn(args.cid)))
