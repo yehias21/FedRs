@@ -42,9 +42,9 @@ class NCFClient(fl.client.NumPyClient):
         self.test_loader = test_loader
         self.batch_size = 32
         self.num_examples = num_examples
-        item_param = [param for name, param in self.model.named_parameters() if (name.startswith('embedding_item') or name.startswith('affine'))]
+        item_param = [param for name, param in self.model.named_parameters() if (name.startswith('embedding_item') or name.startswith('fc'))]
         other_param = [param for name, param in self.model.named_parameters() if
-                       not (name.startswith('embedding_item') or name.startswith('affine'))]
+                       not (name.startswith('embedding_item') or name.startswith('fc'))]
         self.optimizer = torch.optim.SGD(other_param, lr=0.1, weight_decay=0.)
         self.optimizer_i = torch.optim.SGD(item_param, lr=0.1 * 3706 * 80, weight_decay=0.)
         self._load_client_state()
@@ -102,7 +102,7 @@ class NCFClient(fl.client.NumPyClient):
         # print(f"[Client {self.cid}] evaluate, config: {config}")
         self.set_parameters(parameters)
         metrics = calc_metrics(model=self.model,
-                               test_loader=self.test_loader,
+                               test_loader=self.test_loader(),
                                device=self.device)
         return 0.0, self.num_examples["testset"], metrics
 
@@ -139,7 +139,7 @@ def client_fn(cid) -> NCFClient:
     return NCFClient(cid=int(cid),
                      model=net,
                      train_loader=train_loader,
-                     test_loader=test_loader,
+                     test_loader=loader.get_test_instance,
                      num_examples=num_examples,
                      device=DEVICE)
 
