@@ -27,6 +27,11 @@ class MF_FedAvgStrategy(FedAvg):
             return None, {}
 
         aggregated_parameters, aggregated_metrics = self.mf_aggregate_fit(server_round, results, failures)
+        # weights_results = [
+        #     (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
+        #     for _, fit_res in results
+        # ]
+        # aggregated_parameters = ndarrays_to_parameters(aggregate(weights_results))
         for metric in aggregated_metrics:
             server_writer.add_scalar(f'{metric}/Train', aggregated_metrics[metric], server_round)
 

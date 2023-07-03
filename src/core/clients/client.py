@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os.path
 from datetime import datetime
 from typing import List
@@ -41,7 +42,11 @@ class NCFClient(fl.client.NumPyClient):
         self.test_loader = test_loader
         self.batch_size = 32
         self.num_examples = num_examples
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=float(config["Client"]["learning_rate"]))
+        item_param = [param for name, param in self.model.named_parameters() if (name.startswith('embedding_item') or name.startswith('affine'))]
+        other_param = [param for name, param in self.model.named_parameters() if
+                       not (name.startswith('embedding_item') or name.startswith('affine'))]
+        self.optimizer = torch.optim.SGD(other_param, lr=0.1, weight_decay=0.)
+        self.optimizer_i = torch.optim.SGD(item_param, lr=0.1 * 3706 * 80, weight_decay=0.)
         self._load_client_state()
 
     def train(self, epochs, server_round):
@@ -54,11 +59,18 @@ class NCFClient(fl.client.NumPyClient):
         for epoch in range(epochs):
             # pbar = tqdm(enumerate(self.train_loader))
             for i, (x, y) in enumerate(self.train_loader):
-                x, y = x.to(DEVICE), y.to(DEVICE)
                 self.optimizer.zero_grad()
+                x, y = x.to(DEVICE), y.to(DEVICE)
+                z = copy.deepcopy(x)
                 loss = criterion(self.model(x), y)
                 loss.backward()
                 self.optimizer.step()
+
+                self.optimizer_i.zero_grad()
+                x, y = x.to(DEVICE), y.to(DEVICE)
+                loss_i = criterion(self.model(z), y)
+                loss_i.backward()
+                self.optimizer_i.step()
                 running_loss = loss.item()
                 updated_items.scatter_(0, x.to(torch.int64), 1)
                 # pbar.set_description(f"Round[{server_round}], Client[{self.cid}], Epoch [{epoch + 1}/{epochs}]")
@@ -99,11 +111,11 @@ class NCFClient(fl.client.NumPyClient):
         save_path = os.path.join("./checkpoints", "clients")
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        wanted_to_be_saved_params = ['embedding_user_mlp.weight', 'embedding_user_mf.weight']
-        state_dict = {param_name: self.model.state_dict()[param_name] for param_name in wanted_to_be_saved_params}
+        wanted_to_be_saved_params = ['embedding_item_mlp.weight', 'embedding_item_mf.weight', 'fc_layers.weight']
+        state_dict = {param_name: self.model.state_dict()[param_name] for param_name in self.model.state_dict() if
+                      param_name not in wanted_to_be_saved_params}
         torch.save({
             'model_dict': state_dict,
-            'optimizer': self.optimizer.state_dict(),
         },
             f=os.path.join(save_path, f"{self.cid}.pt"),
         )
@@ -112,7 +124,7 @@ class NCFClient(fl.client.NumPyClient):
         checkpoint_path = os.path.join("./checkpoints", "clients", f"{self.cid}.pt")
         if os.path.exists(checkpoint_path):
             checkpoint = torch.load(checkpoint_path)
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            # self.optimizer.load_state_dict(checkpoint['optimizer'])
             model_dict = checkpoint['model_dict']
             for param_name in model_dict:
                 if param_name in self.model.state_dict():

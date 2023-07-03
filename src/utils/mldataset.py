@@ -76,7 +76,8 @@ def federate_data(args):
         shutil.rmtree(out_path)
     os.makedirs(out_path, exist_ok=True)
     # read dataset using pandas
-    df = pd.read_csv(os.path.join(data_path, 'ratings.dat'), sep="::", names=['users', 'items', 'ratings', 'timestamp'])
+    # df = pd.read_csv(os.path.join(data_path, 'ratings.dat'), sep="::", names=['users', 'items', 'ratings', 'timestamp'])
+    df = pd.read_csv(os.path.join(data_path, 'u.data'), names=['users', 'items', 'ratings', 'timestamp'])
     df.loc[:, 'ratings'] = 1
 
     ''' 

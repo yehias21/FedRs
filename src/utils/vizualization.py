@@ -29,7 +29,8 @@ class ServerWriter:
     _instance = SummaryWriter(comment=f'_Server_'
                                       f'C{config["Common"]["num_clients"]}_'
                                       f'LE{config["Client"]["num_epochs"]}_'
-                                      f'LR{config["Client"]["learning_rate"]}'
+                                      f'LR{config["Client"]["learning_rate"]}-'
+                                      f'S{config["Common"]["seed"]}-'
                               )
 
     def __new__(cls, *args, **kwargs) -> SummaryWriter:

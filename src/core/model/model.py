@@ -74,20 +74,19 @@ class NeuMF(nn.Module):
 
     def get_parameters(self):
         params = []
-        excluded_params = ['embedding_user_mlp.weight', 'embedding_user_mf.weight']
+        excluded_params = ['embedding_item_mlp.weight', 'embedding_item_mf.weight', 'fc_layers.weight']
         for item, val in self.state_dict().items():
             if item in excluded_params:
-                continue
-            params.append(val.cpu().numpy())
+               params.append(val.cpu().numpy())
         return params
 
     def set_parameters(self, parameters: List[np.ndarray]):
         param_names = list(self.state_dict().keys())
-        excluded_params = ['embedding_user_mlp.weight', 'embedding_user_mf.weight']
+        excluded_params = ['embedding_item_mlp.weight', 'embedding_item_mf.weight', 'fc_layers.weight']
         state_dict = OrderedDict()
         i = 0
         for key in param_names:
-            if key not in excluded_params:
+            if key in excluded_params:
                 state_dict[key] = torch.tensor(parameters[i])
                 i += 1
             else:
