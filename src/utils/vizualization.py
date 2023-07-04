@@ -26,11 +26,12 @@ def plot_metric_from_history(
 
 
 class ServerWriter:
-    _instance = SummaryWriter(comment=f'_Server_'
-                                      f'C{config["Common"]["num_clients"]}_'
-                                      f'LE{config["Client"]["num_epochs"]}_'
-                                      f'LR{config["Client"]["learning_rate"]}-'
-                                      f'S{config["Common"]["seed"]}-'
+    _instance = SummaryWriter(comment="_".join([f'_Server', "ml1m", "MF-DualPEdit",
+                                                f'C{config["Common"]["num_clients"]}',
+                                                f'LE{config["Client"]["num_epochs"]}',
+                                                f'LR{config["Client"]["learning_rate"]}',
+                                                f"S{config['Common']['seed']}",
+                                                ])
                               )
 
     def __new__(cls, *args, **kwargs) -> SummaryWriter:

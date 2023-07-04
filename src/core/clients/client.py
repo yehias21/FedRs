@@ -11,7 +11,7 @@ from flwr.client import SecAggClient
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from src.core.model.model import NeuMF
+from src.core.model.pmodel import NeuMF
 from src.utils.evaluate import calc_metrics
 from src.utils.mldataset import NCFloader
 from src.utils.utils import get_config, seed_everything
@@ -42,11 +42,11 @@ class NCFClient(fl.client.NumPyClient):
         self.test_loader = test_loader
         self.batch_size = 32
         self.num_examples = num_examples
-        item_param = [param for name, param in self.model.named_parameters() if (name.startswith('embedding_item') or name.startswith('fc'))]
+        item_param = [param for name, param in self.model.named_parameters() if (name.startswith('embedding_item'))]
         other_param = [param for name, param in self.model.named_parameters() if
-                       not (name.startswith('embedding_item') or name.startswith('fc'))]
-        self.optimizer = torch.optim.SGD(other_param, lr=0.1, weight_decay=0.)
-        self.optimizer_i = torch.optim.SGD(item_param, lr=0.1 * 3706 * 80, weight_decay=0.)
+                       not (name.startswith('embedding_item'))]
+        self.optimizer = torch.optim.SGD(other_param, lr=0.1, weight_decay=0.1)
+        self.optimizer_i = torch.optim.SGD(item_param, lr=10, weight_decay=0.1)
         self._load_client_state()
 
     def train(self, epochs, server_round):
@@ -96,7 +96,8 @@ class NCFClient(fl.client.NumPyClient):
                                          server_round=config['server_round'])
         metrics = {'loss': loss, 'updated_items': bytes(updated_items.tolist())}
         self._save_client_state()
-        return self.get_parameters(config={}), updated_items.sum().item(), metrics
+        params = self.get_parameters(config={})
+        return params, updated_items.sum().item(), metrics
 
     def evaluate(self, parameters, config):
         # print(f"[Client {self.cid}] evaluate, config: {config}")
@@ -111,7 +112,7 @@ class NCFClient(fl.client.NumPyClient):
         save_path = os.path.join("./checkpoints", "clients")
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        wanted_to_be_saved_params = ['embedding_item_mlp.weight', 'embedding_item_mf.weight', 'fc_layers.weight']
+        wanted_to_be_saved_params = ['embedding_item.weight']
         state_dict = {param_name: self.model.state_dict()[param_name] for param_name in self.model.state_dict() if
                       param_name not in wanted_to_be_saved_params}
         torch.save({

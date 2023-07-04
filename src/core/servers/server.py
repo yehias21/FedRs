@@ -6,8 +6,6 @@ import flwr as fl
 import torch
 
 from src.core.clients.client import client_fn
-from flwr.server.strategy.fedavg import FedAvg
-# from src.core.servers.serverFedMFSecagg import MF_SecAggStrategy
 from src.core.servers.serverFedWAvg import MF_FedAvgStrategy
 from src.utils import utils
 from src.utils.utils import config
@@ -47,12 +45,11 @@ if __name__ == '__main__':
     #     # TODO: Checkpointing on item embeddings and model parameters.
     #     initial_parameters=None,
     # )
-
+    if os.path.isdir("./checkpoints/clients"):
+        print("delete")
+        shutil.rmtree("./checkpoints/clients")
     # Start Flower server
     if args.sim:
-        if os.path.isdir("./checkpoints/clients"):
-            print("delete")
-            shutil.rmtree("./checkpoints/clients")
         strategy.fraction_fit = 120 / int(config["Common"]["num_clients"])
         strategy.fraction_evaluate = 120 / int(config["Common"]["num_clients"])
         history = fl.simulation.start_simulation(

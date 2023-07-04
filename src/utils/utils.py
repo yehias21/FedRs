@@ -4,7 +4,6 @@ import random
 import re
 from typing import List, Tuple
 
-import flwr as fl
 import numpy as np
 import torch
 from flwr.common import Metrics, NDArrays
@@ -28,6 +27,7 @@ def get_config():
 
 
 def read_latest_params(checkpoints_path: str = "./checkpoints"):
+    import flwr as fl
     # Find all saved weights files
     weights_files = []
     for filename in os.listdir(checkpoints_path):
@@ -70,27 +70,26 @@ def weighted_eval_metrics(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 def aggregate_mf(results: List[Tuple[NDArrays, List[int]]]) -> NDArrays:
     # TODO: handle the case where total_updated_items is zero
     agg_embedding_item_mlp = np.zeros_like(results[0][0][0])
-    agg_embedding_item_mf = np.zeros_like(results[0][0][1])
+    # agg_embedding_item_mf = np.zeros_like(results[0][0][1])
 
     total_updated_items = np.array([up_items for _, up_items in results]).sum(axis=0).reshape(-1, 1)
     zero_updates = np.where(total_updated_items == 0)[0]
 
     for i, (i_vectors, up_items) in enumerate(results):
         agg_embedding_item_mlp += i_vectors[0] * np.array(up_items).reshape(-1, 1)
-        agg_embedding_item_mf += i_vectors[1] * np.array(up_items).reshape(-1, 1)
+        # agg_embedding_item_mf += i_vectors[1] * np.array(up_items).reshape(-1, 1)
 
     # Avoid division by zero
     if len(zero_updates) > 0:
         print(f"{len(zero_updates)} items have not been updated !!!")
         total_updated_items[zero_updates] = 1
         # Set the aggregated values to the i_vectors value for the indices where total_updated_items is zero
-        for aggregated_embedding, original_embedding in zip([agg_embedding_item_mlp, agg_embedding_item_mf],
+        for aggregated_embedding, original_embedding in zip([agg_embedding_item_mlp],
                                                             results[0][0]):
             aggregated_embedding[zero_updates] = original_embedding[zero_updates]
 
     agg_embedding_item_mlp /= total_updated_items
-    agg_embedding_item_mf /= total_updated_items
-    return [agg_embedding_item_mlp, agg_embedding_item_mf]
+    return [agg_embedding_item_mlp]
 
 
 config = get_config()

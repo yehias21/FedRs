@@ -26,7 +26,7 @@ class MF_FedAvgStrategy(FedAvg):
         if not results:
             return None, {}
 
-        aggregated_parameters, aggregated_metrics = self.mf_aggregate_fit(server_round, results, failures)
+        aggregated_parameters, aggregated_metrics = super().aggregate_fit(server_round, results, failures)
         # weights_results = [
         #     (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
         #     for _, fit_res in results
@@ -62,7 +62,7 @@ class MF_FedAvgStrategy(FedAvg):
         # Convert and parse results
         for _, r in results:
             params = parameters_to_ndarrays(r.parameters)
-            i_vectors, nn_weights = params[:2], params[2:]
+            i_vectors, nn_weights = params[:1], params[1:]
             updated_items_results.append((i_vectors, list(r.metrics['updated_items'])))
             nn_weights_results.append((nn_weights, r.num_examples))
 
